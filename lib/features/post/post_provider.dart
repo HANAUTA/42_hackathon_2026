@@ -83,7 +83,8 @@ class PostController {
   final Ref _ref;
 
   // 動画を videos バケットへアップロードし、posts と post_shares を作成する。
-  // 複数グループへの同時送信に対応。
+  // postsは常に作成され「自分のログ」に表示される。
+  // groupIdsを指定するとそのグループにも共有する（複数同時送信に対応）。
   Future<void> send({
     required XFile video,
     required List<String> groupIds,
@@ -91,9 +92,6 @@ class PostController {
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) {
       throw StateError('ログインが必要です');
-    }
-    if (groupIds.isEmpty) {
-      throw ArgumentError('送信先グループが選択されていません');
     }
 
     final bytes = await video.readAsBytes();
@@ -116,15 +114,17 @@ class PostController {
         .single();
     final postId = post['id'] as String;
 
-    await supabase.from('post_shares').insert([
-      for (final groupId in groupIds)
-        {
-          'post_id': postId,
-          'group_id': groupId,
-          'shared_date': _dateString(now),
-          'shared_hour': now.hour,
-        },
-    ]);
+    if (groupIds.isNotEmpty) {
+      await supabase.from('post_shares').insert([
+        for (final groupId in groupIds)
+          {
+            'post_id': postId,
+            'group_id': groupId,
+            'shared_date': _dateString(now),
+            'shared_hour': now.hour,
+          },
+      ]);
+    }
 
     _ref.read(recordedVideoProvider.notifier).clear();
   }

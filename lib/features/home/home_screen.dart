@@ -319,9 +319,8 @@ class _VlogFeedState extends State<_VlogFeed> {
         child: GestureDetector(
           onTap: _togglePlayPause,
           child: AspectRatio(
-            aspectRatio: (_initialized && controller != null)
-                ? controller.value.aspectRatio.clamp(1.2, 2.0)
-                : 16 / 10,
+            // ホームでは横長のスリムなカードで表示する（撮影は縦長・横向き）。
+            aspectRatio: 16 / 9,
             child: Stack(
               fit: StackFit.expand,
               children: [

@@ -1,6 +1,7 @@
 // アプリ全体の画面遷移（ルーティング）を定義。
 // 全ルートをここに集約する。画面内で直接 Navigator.push は使わない。
 
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/auth/splash_screen.dart';
@@ -34,7 +35,25 @@ final router = GoRouter(
       builder: (context, state) =>
           GroupDetailScreen(groupId: state.pathParameters['id']!),
     ),
-    GoRoute(path: '/camera', builder: (context, state) => const CameraScreen()),
+    // カメラはボタンが左にあるため、左からスライドして遷移させる。
+    GoRoute(
+      path: '/camera',
+      pageBuilder: (context, state) => CustomTransitionPage<void>(
+        key: state.pageKey,
+        child: const CameraScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(-1, 0),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOut),
+            ),
+            child: child,
+          );
+        },
+      ),
+    ),
     GoRoute(path: '/send', builder: (context, state) => const SendScreen()),
   ],
 );

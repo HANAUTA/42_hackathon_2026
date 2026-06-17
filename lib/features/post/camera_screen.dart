@@ -31,6 +31,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   int _countdown = 0;
   Timer? _timer;
 
+  // 録画は2秒で自動停止する（Setlog風の短尺ログ）。
+  static const _recordDuration = Duration(seconds: 2);
+  Timer? _recordTimer;
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +44,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _recordTimer?.cancel();
     _controller?.dispose();
     super.dispose();
   }
@@ -127,12 +132,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     try {
       await controller.startVideoRecording();
       setState(() => _isRecording = true);
+      // 2秒経過で自動停止する。
+      _recordTimer = Timer(_recordDuration, _stopRecording);
     } catch (e) {
       setState(() => _error = '録画開始に失敗しました: $e');
     }
   }
 
   Future<void> _stopRecording() async {
+    _recordTimer?.cancel();
     final controller = _controller;
     if (controller == null || !_isRecording) return;
     try {
@@ -152,13 +160,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text('撮影'),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => context.backOrHome(),
-        ),
-      ),
       body: SafeArea(
         child: _error != null
             ? _ErrorView(message: _error!)
@@ -169,40 +170,85 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     );
   }
 
+  // 縦長フレームに横向きで撮影する（プレビューは画面いっぱいにcover表示）。
   Widget _buildCameraView() {
     final controller = _controller!;
-    return Column(
+    final mediaSize = MediaQuery.of(context).size;
+    // 画面いっぱいに歪みなくcover表示するためのスケール係数。
+    final scale =
+        1 / (controller.value.aspectRatio * mediaSize.aspectRatio);
+
+    return Stack(
       children: [
-        Expanded(
-          child: Center(
-            child: Stack(
+        Positioned.fill(
+          child: ClipRect(
+            child: Transform.scale(
+              scale: scale,
               alignment: Alignment.center,
-              children: [
-                AspectRatio(
-                  aspectRatio: controller.value.aspectRatio,
-                  child: CameraPreview(controller),
-                ),
-                if (_countdown > 0)
-                  Text(
-                    '$_countdown',
-                    style: const TextStyle(
-                      fontSize: 96,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-              ],
+              child: Center(child: CameraPreview(controller)),
             ),
           ),
         ),
-        _buildControls(),
+        // 撮影中・待機中は中央に横向きで現在時刻を表示する。
+        // カウントダウン中は数字と被るため時刻は隠す。
+        if (_countdown == 0)
+          Center(
+            child: RotatedBox(
+              quarterTurns: 1,
+              child: Text(
+                _currentTimeLabel,
+                style: const TextStyle(
+                  fontSize: 64,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  shadows: [Shadow(blurRadius: 12, color: Colors.black54)],
+                ),
+              ),
+            ),
+          )
+        else
+          Center(
+            child: Text(
+              '$_countdown',
+              style: const TextStyle(
+                fontSize: 96,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: _CircleButton(
+            icon: Icons.close,
+            onTap: () => context.backOrHome(),
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: _buildControls(),
+        ),
       ],
     );
   }
 
+  String get _currentTimeLabel {
+    final now = DateTime.now();
+    return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+  }
+
   Widget _buildControls() {
     return Container(
-      color: Colors.black,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.transparent, Colors.black54],
+        ),
+      ),
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -245,6 +291,30 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     const options = [0, 3, 5, 10];
     final next = options[(options.indexOf(_timerSeconds) + 1) % options.length];
     setState(() => _timerSeconds = next);
+  }
+}
+
+// 半透明の丸型アイコンボタン（閉じるボタン用）。
+class _CircleButton extends StatelessWidget {
+  const _CircleButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+        ),
+        child: Icon(icon, size: 22, color: Colors.black87),
+      ),
+    );
   }
 }
 

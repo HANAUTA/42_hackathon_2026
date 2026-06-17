@@ -22,6 +22,8 @@ class SendScreen extends ConsumerStatefulWidget {
 class _SendScreenState extends ConsumerState<SendScreen> {
   VideoPlayerController? _videoController;
   final Set<String> _selectedGroupIds = {};
+  // 自分のログへの投稿（時間制限なし）。初期状態でオン。
+  bool _postToSelf = true;
   bool _sending = false;
 
   @override
@@ -61,7 +63,8 @@ class _SendScreenState extends ConsumerState<SendScreen> {
 
   Future<void> _send() async {
     final video = ref.read(recordedVideoProvider);
-    if (video == null || _selectedGroupIds.isEmpty || _sending) return;
+    if (video == null || _sending) return;
+    if (!_postToSelf && _selectedGroupIds.isEmpty) return;
 
     setState(() => _sending = true);
     try {
@@ -119,9 +122,11 @@ class _SendScreenState extends ConsumerState<SendScreen> {
             padding: EdgeInsets.all(12),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('送信先グループ', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text('送信先', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
+          _buildSelfTile(),
+          const Divider(height: 1),
           Expanded(
             child: targets.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -143,12 +148,29 @@ class _SendScreenState extends ConsumerState<SendScreen> {
       width: double.infinity,
       child: controller != null && controller.value.isInitialized
           ? Center(
-              child: AspectRatio(
-                aspectRatio: controller.value.aspectRatio,
-                child: VideoPlayer(controller),
+              // 縦で撮影した動画を90度左回転して横向きで再生する。
+              child: RotatedBox(
+                quarterTurns: 3,
+                child: AspectRatio(
+                  aspectRatio: controller.value.aspectRatio,
+                  child: VideoPlayer(controller),
+                ),
               ),
             )
           : const Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  // 「自分のログへあげる」選択肢。常に表示し、時間制限はかからない。
+  Widget _buildSelfTile() {
+    return CheckboxListTile(
+      value: _postToSelf,
+      onChanged: _sending
+          ? null
+          : (checked) => setState(() => _postToSelf = checked ?? false),
+      secondary: const Icon(Icons.person_outline),
+      title: const Text('自分のログへあげる'),
+      subtitle: const Text('時間制限なし'),
     );
   }
 
@@ -189,7 +211,7 @@ class _SendScreenState extends ConsumerState<SendScreen> {
   }
 
   Widget _buildBottomBar() {
-    final canSend = _selectedGroupIds.isNotEmpty && !_sending;
+    final canSend = (_postToSelf || _selectedGroupIds.isNotEmpty) && !_sending;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(12),
