@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/supabase_client.dart';
+import 'auth_errors.dart';
 import 'auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -65,7 +66,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ref.listen(authControllerProvider, (prev, next) {
       if (next.hasError) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('エラー: ${next.error}')),
+          SnackBar(content: Text(authErrorMessage(next.error!))),
         );
       }
     });
@@ -82,6 +83,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const _LoginHeader(),
+                  const SizedBox(height: 32),
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -124,7 +127,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ? null
                         : () => setState(() => _isSignUp = !_isSignUp),
                     child: Text(
-                      _isSignUp ? 'アカウントをお持ちの方はこちら' : '新規登録はこちら',
+                      _isSignUp ? 'アカウントをお持ちの方はログイン' : 'アカウントが無い方は新規登録',
                     ),
                   ),
                   const Divider(height: 32),
@@ -147,6 +150,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ログイン画面上部のブランドヘッダー。アプリ名とひとことを表示する。
+class _LoginHeader extends StatelessWidget {
+  const _LoginHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Icon(
+          Icons.video_camera_front_rounded,
+          size: 56,
+          color: theme.colorScheme.primary,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Setlog',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'グループで動画を共有しよう',
+          style: theme.textTheme.bodyMedium
+              ?.copyWith(color: theme.colorScheme.outline),
+        ),
+      ],
     );
   }
 }

@@ -39,10 +39,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await createProfile(userId: user.id, name: _nameController.text.trim());
       if (!mounted) return;
       context.go('/home');
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('登録に失敗しました: $e')),
+        const SnackBar(content: Text('登録に失敗しました。もう一度お試しください。')),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
