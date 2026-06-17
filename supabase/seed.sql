@@ -14,7 +14,7 @@
 
 do $$
 declare
-  v_user uuid := 'PASTE-YOUR-AUTH-USER-UUID';  -- ← ここを自分のUUIDに置き換える
+  v_user uuid := '13704c38-86ec-4e5d-b363-fe261d60041b';  -- ← ここを自分のUUIDに置き換える
   v_group_a uuid;
   v_group_b uuid;
   v_post1 uuid;
