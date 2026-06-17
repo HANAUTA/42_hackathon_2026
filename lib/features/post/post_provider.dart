@@ -60,6 +60,7 @@ final sendTargetsProvider = FutureProvider.autoDispose<SendTargets>((ref) async 
   final shareRows = await supabase
       .from('post_shares')
       .select('group_id')
+      .eq('user_id', userId)
       .eq('shared_date', today)
       .eq('shared_hour', hour)
       .inFilter('group_id', [for (final g in groups) g.id]);
@@ -120,6 +121,7 @@ class PostController {
           {
             'post_id': postId,
             'group_id': groupId,
+            'user_id': userId,
             'shared_date': _dateString(now),
             'shared_hour': now.hour,
           },

@@ -54,17 +54,19 @@ create table public.posts (
 
 -- post_shares: 投稿の共有先グループ。1投稿を複数グループへ共有できる。
 -- shared_date(日付) と shared_hour(時) を明示的に持ち、
--- 「1グループ・同じ日・同じ時間帯は1回まで」を一意制約で保証する（投稿ルール）。
+-- 「1グループ・同じユーザー・同じ日・同じ時間帯は1回まで」を一意制約で保証する（投稿ルール）。
+-- ※制約に user_id を含めるため、誰か1人が投稿しても他メンバーは同じ時間帯に投稿できる。
 -- 日付を式(created_at::date)で持つとIMMUTABLEでなくインデックスに使えないため、
 -- 日本時間の日付をカラムとして保存する。
 create table public.post_shares (
   id uuid primary key default gen_random_uuid(),
   post_id uuid not null references public.posts (id) on delete cascade,
   group_id uuid not null references public.groups (id) on delete cascade,
+  user_id uuid not null references public.users (id) on delete cascade,
   shared_date date not null default ((now() at time zone 'Asia/Tokyo')::date),
   shared_hour int not null check (shared_hour between 0 and 23),
   created_at timestamptz not null default now(),
-  unique (group_id, shared_date, shared_hour)
+  unique (group_id, user_id, shared_date, shared_hour)
 );
 
 -- 一覧取得を速くするためのインデックス
@@ -117,12 +119,13 @@ create policy "posts_insert_self" on public.posts
 create policy "posts_delete_self" on public.posts
   for delete using (auth.uid() = user_id);
 
--- post_shares: ログインユーザーは読める / 作成は投稿の所有者のみ
+-- post_shares: ログインユーザーは読める / 作成は本人の投稿のみ
 create policy "post_shares_select_all" on public.post_shares
   for select using (auth.role() = 'authenticated');
 create policy "post_shares_insert_owner" on public.post_shares
   for insert with check (
-    exists (
+    auth.uid() = user_id
+    and exists (
       select 1 from public.posts p
       where p.id = post_id and p.user_id = auth.uid()
     )

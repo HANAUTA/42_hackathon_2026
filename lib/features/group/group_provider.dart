@@ -15,6 +15,7 @@ import '../../models/group.dart';
 class GroupPost {
   const GroupPost({
     required this.postId,
+    required this.userId,
     required this.videoUrl,
     required this.userName,
     this.userIconUrl,
@@ -22,6 +23,7 @@ class GroupPost {
   });
 
   final String postId;
+  final String userId;
   final String videoUrl;
   final String userName;
   final String? userIconUrl;
@@ -168,7 +170,7 @@ class GroupService {
     final rows = await supabase
         .from('post_shares')
         .select(
-            'created_at, posts(id, video_url, created_at, users(name, icon_url))')
+            'created_at, posts(id, user_id, video_url, created_at, users(name, icon_url))')
         .eq('group_id', args.groupId)
         .eq('shared_date', args.sharedDate)
         .eq('shared_hour', args.hour)
@@ -179,6 +181,7 @@ class GroupService {
       final user = post['users'] as Map<String, dynamic>?;
       return GroupPost(
         postId: post['id'] as String,
+        userId: post['user_id'] as String,
         videoUrl: post['video_url'] as String,
         userName: (user?['name'] as String?) ?? '名無し',
         userIconUrl: user?['icon_url'] as String?,

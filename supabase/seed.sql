@@ -56,10 +56,10 @@ begin
 
   -- 共有（グループAに現在時刻の時間帯 / 1つ前の時間帯、グループBに現在時刻）
   -- グループ詳細画面の「時間移動」を確認できるよう、複数の時間帯に配置。
-  insert into public.post_shares (post_id, group_id, shared_date, shared_hour)
-    values (v_post1, v_group_a, current_date, v_now_hour);
-  insert into public.post_shares (post_id, group_id, shared_date, shared_hour)
-    values (v_post2, v_group_a, current_date, greatest(v_now_hour - 1, 0));
-  insert into public.post_shares (post_id, group_id, shared_date, shared_hour)
-    values (v_post3, v_group_b, current_date, v_now_hour);
+  insert into public.post_shares (post_id, group_id, user_id, shared_date, shared_hour)
+    values (v_post1, v_group_a, v_user, current_date, v_now_hour);
+  insert into public.post_shares (post_id, group_id, user_id, shared_date, shared_hour)
+    values (v_post2, v_group_a, v_user, current_date, greatest(v_now_hour - 1, 0));
+  insert into public.post_shares (post_id, group_id, user_id, shared_date, shared_hour)
+    values (v_post3, v_group_b, v_user, current_date, v_now_hour);
 end $$;
