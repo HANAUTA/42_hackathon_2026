@@ -361,12 +361,17 @@ class _VlogFeedState extends State<_VlogFeed> {
                     ),
                   )
                 else if (_initialized && controller != null)
+                  // 縦で撮影した動画を90度左回転して横向きで表示する
+                  // （送信プレビュー・グループ詳細と向きを揃える）。
                   FittedBox(
                     fit: BoxFit.cover,
-                    child: SizedBox(
-                      width: controller.value.size.width,
-                      height: controller.value.size.height,
-                      child: VideoPlayer(controller),
+                    child: RotatedBox(
+                      quarterTurns: 3,
+                      child: SizedBox(
+                        width: controller.value.size.width,
+                        height: controller.value.size.height,
+                        child: VideoPlayer(controller),
+                      ),
                     ),
                   )
                 else
