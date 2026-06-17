@@ -83,13 +83,13 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           Expanded(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              // 左スワイプ→前日 / 右スワイプ→翌日。
+              // 昨日が左・翌日が右のイメージ。右スワイプ→前日 / 左スワイプ→翌日。
               onHorizontalDragEnd: (details) {
                 final v = details.primaryVelocity ?? 0;
                 if (v < 0) {
-                  _changeDate(-1);
-                } else if (v > 0) {
                   _changeDate(1);
+                } else if (v > 0) {
+                  _changeDate(-1);
                 }
               },
               child: postsAsync.when(
@@ -285,21 +285,37 @@ class _PostVideoCard extends StatefulWidget {
 class _PostVideoCardState extends State<_PostVideoCard> {
   VideoPlayerController? _controller;
   bool _initialized = false;
+  bool _failed = false;
 
-  Future<void> _ensureInitialized() async {
-    if (_controller != null) return;
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  // 表示された瞬間に自動再生する（ループ）。
+  Future<void> _initialize() async {
     final controller =
         VideoPlayerController.networkUrl(Uri.parse(widget.post.videoUrl));
     _controller = controller;
-    await controller.initialize();
-    if (!mounted) return;
-    setState(() => _initialized = true);
+    try {
+      await controller.initialize();
+      await controller.setLooping(true);
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() => _initialized = true);
+      await controller.play();
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
   }
 
-  Future<void> _toggle() async {
-    await _ensureInitialized();
+  // タップで再生 / 一時停止を切り替える。
+  void _toggle() {
     final controller = _controller;
-    if (controller == null) return;
+    if (controller == null || !_initialized) return;
     setState(() {
       controller.value.isPlaying ? controller.pause() : controller.play();
     });
@@ -339,20 +355,35 @@ class _PostVideoCardState extends State<_PostVideoCard> {
               aspectRatio: (_initialized && controller != null)
                   ? controller.value.aspectRatio
                   : 16 / 9,
-              child: (_initialized && controller != null)
-                  ? Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        VideoPlayer(controller),
-                        if (!controller.value.isPlaying)
-                          const Icon(Icons.play_circle_fill,
-                              size: 56, color: Colors.white70),
-                      ],
-                    )
-                  : Container(
+              child: _failed
+                  ? Container(
                       color: Colors.black12,
-                      child: const Icon(Icons.play_circle_outline, size: 56),
-                    ),
+                      child: const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.error_outline, size: 40),
+                            SizedBox(height: 8),
+                            Text('動画を読み込めませんでした'),
+                          ],
+                        ),
+                      ),
+                    )
+                  : (_initialized && controller != null)
+                      ? Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            VideoPlayer(controller),
+                            if (!controller.value.isPlaying)
+                              const Icon(Icons.play_circle_fill,
+                                  size: 56, color: Colors.white70),
+                          ],
+                        )
+                      : Container(
+                          color: Colors.black12,
+                          child: const Center(
+                              child: CircularProgressIndicator()),
+                        ),
             ),
           ),
         ],

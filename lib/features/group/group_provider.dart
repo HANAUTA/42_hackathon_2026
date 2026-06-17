@@ -191,18 +191,22 @@ class GroupService {
 final groupServiceProvider = Provider<GroupService>((ref) => GroupService());
 
 // グループ基本情報を取得するProvider。
-final groupProvider = FutureProvider.family<Group, String>((ref, groupId) {
+// autoDispose: 画面を開くたびに最新を取得する（古いキャッシュを残さない）。
+final groupProvider =
+    FutureProvider.autoDispose.family<Group, String>((ref, groupId) {
   return ref.read(groupServiceProvider).fetchGroup(groupId);
 });
 
 // グループのメンバー一覧を取得するProvider。
 final groupMembersProvider =
-    FutureProvider.family<List<AppUser>, String>((ref, groupId) {
+    FutureProvider.autoDispose.family<List<AppUser>, String>((ref, groupId) {
   return ref.read(groupServiceProvider).fetchMembers(groupId);
 });
 
 // 指定した日付・時間帯のグループ投稿一覧を取得するProvider。
+// autoDispose にすることで、送信後に開き直すと投稿が反映される。
 final groupPostsProvider =
-    FutureProvider.family<List<GroupPost>, GroupPostsArgs>((ref, args) {
+    FutureProvider.autoDispose.family<List<GroupPost>, GroupPostsArgs>(
+        (ref, args) {
   return ref.read(groupServiceProvider).fetchPosts(args);
 });
