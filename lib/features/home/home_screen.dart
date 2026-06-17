@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/cached_video.dart';
 import '../../models/group.dart';
 import '../../models/post.dart';
 import '../auth/auth_provider.dart';
@@ -237,33 +238,45 @@ class _VlogFeedState extends State<_VlogFeed> {
   }
 
   Future<void> _loadVideo(int index) async {
-    _controller?.removeListener(_checkCompletion);
-    _controller?.dispose();
-    _controller = null;
     _transitioning = false;
 
-    if (!mounted) return;
-    setState(() {
-      _currentIndex = index;
-      _initialized = false;
-      _hasError = false;
-    });
-
-    final controller = VideoPlayerController.networkUrl(
-      Uri.parse(widget.posts[index].videoUrl),
-    );
-    _controller = controller;
+    // 初回（表示する動画がまだ無い）だけスピナーを出す。
+    // 切り替え時は前の動画を表示したまま、次の準備ができてから差し替える。
+    final isFirst = _controller == null;
+    if (isFirst && mounted) {
+      setState(() {
+        _initialized = false;
+        _hasError = false;
+      });
+    }
 
     try {
+      // キャッシュ済みなら即時、無ければ取得してから再生（再取得を防ぐ）。
+      final controller =
+          await createCachedVideoController(widget.posts[index].videoUrl);
       await controller.initialize();
-      if (!mounted) return;
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
       if (widget.posts.length == 1) {
         await controller.setLooping(true);
       } else {
         controller.addListener(_checkCompletion);
       }
-      setState(() => _initialized = true);
+
+      // 新しい動画の準備が整ってから旧コントローラを破棄する（黒画面を防ぐ）。
+      final old = _controller;
+      old?.removeListener(_checkCompletion);
+      setState(() {
+        _controller = controller;
+        _currentIndex = index;
+        _initialized = true;
+        _hasError = false;
+      });
       await controller.play();
+      await old?.dispose();
+      _prefetchNext(index);
     } catch (_) {
       if (!mounted) return;
       setState(() => _hasError = true);
@@ -271,6 +284,13 @@ class _VlogFeedState extends State<_VlogFeed> {
         Future.delayed(const Duration(seconds: 2), _playNext);
       }
     }
+  }
+
+  // 次に再生する動画を裏でキャッシュに載せ、切り替えをスムーズにする。
+  void _prefetchNext(int currentIndex) {
+    if (widget.posts.length < 2) return;
+    final nextIndex = (currentIndex + 1) % widget.posts.length;
+    prefetchVideo(widget.posts[nextIndex].videoUrl);
   }
 
   void _checkCompletion() {

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/cached_video.dart';
 import '../../models/app_user.dart';
 import '../../models/group.dart';
 import 'group_provider.dart';
@@ -362,10 +363,11 @@ class _MemberPostCardState extends State<_MemberPostCard> {
   }
 
   Future<void> _initialize() async {
-    final controller =
-        VideoPlayerController.networkUrl(Uri.parse(widget.post.videoUrl));
-    _controller = controller;
     try {
+      // キャッシュ済みなら即時、無ければ取得してから再生（再取得を防ぐ）。
+      final controller =
+          await createCachedVideoController(widget.post.videoUrl);
+      _controller = controller;
       await controller.initialize();
       await controller.setLooping(true);
       if (!mounted) {
