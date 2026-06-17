@@ -58,10 +58,33 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     setState(() => _date = _date.add(Duration(days: deltaDays)));
   }
 
-  String get _dateLabel =>
-      '${_date.year}/${_date.month.toString().padLeft(2, '0')}/${_date.day.toString().padLeft(2, '0')}';
-
   String get _slotLabel => '${_hour.toString().padLeft(2, '0')}:00';
+
+  // 今日・昨日・それ以外は曜日で表す（絶対日付は表示しない）。
+  String get _dayLabel {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final diff = today.difference(_date).inDays;
+    if (diff == 0) return '今日';
+    if (diff == 1) return '昨日';
+    const weekdays = ['月', '火', '水', '木', '金', '土', '日'];
+    return '${weekdays[_date.weekday - 1]}曜日';
+  }
+
+  // 未来へは進めない。今日より前の日付のときだけ翌日へ移動できる。
+  bool get _canGoForwardDate {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return _date.isBefore(today);
+  }
+
+  // 今日の場合は現在時刻より先の時間帯へは進めない。
+  bool get _canGoForwardHour {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (_date == today) return _hour < now.hour;
+    return _hour < 23;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,22 +116,49 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
       ),
       body: Column(
         children: [
-          _buildDateBar(),
-          _buildHourBar(),
-          const Divider(height: 1),
+          // 相対的な日付ラベル（今日/昨日/曜日）のみ表示する。
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              _dayLabel,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
           Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              // 昨日が左・翌日が右のイメージ。右スワイプ→前日 / 左スワイプ→翌日。
-              onHorizontalDragEnd: (details) {
-                final v = details.primaryVelocity ?? 0;
-                if (v < 0) {
-                  _changeDate(1);
-                } else if (v > 0) {
-                  _changeDate(-1);
-                }
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  // 左半分タップ→前の時間 / 右半分タップ→次の時間（未来は不可）。
+                  onTapUp: (details) {
+                    if (details.localPosition.dx < constraints.maxWidth / 2) {
+                      if (_hour > 0) _changeHour(-1);
+                    } else if (_canGoForwardHour) {
+                      _changeHour(1);
+                    }
+                  },
+                  // 昨日が左・翌日が右のイメージ。右スワイプ→前日 / 左スワイプ→翌日。
+                  onHorizontalDragEnd: (details) {
+                    final v = details.primaryVelocity ?? 0;
+                    if (v < 0) {
+                      if (_canGoForwardDate) _changeDate(1);
+                    } else if (v > 0) {
+                      _changeDate(-1);
+                    }
+                  },
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: KeyedSubtree(
+                      key: ValueKey(
+                          '${_date.toIso8601String()}-$_hour'),
+                      child: _buildContent(membersAsync, postsAsync),
+                    ),
+                  ),
+                );
               },
-              child: _buildContent(membersAsync, postsAsync),
             ),
           ),
         ],
@@ -142,11 +192,6 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        _MemberAvatarRow(
-          members: members,
-          postedUserIds: postByUser.keys.toSet(),
-        ),
-        const SizedBox(height: 16),
         for (final member in members)
           postByUser[member.id] != null
               ? _MemberPostCard(
@@ -154,48 +199,6 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   slotLabel: _slotLabel,
                 )
               : _EmptyMemberCard(member: member, slotLabel: _slotLabel),
-      ],
-    );
-  }
-
-  // 日付表示バー（移動は本文の左右スワイプで行う）。
-  Widget _buildDateBar() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Column(
-        children: [
-          Text(_dateLabel, style: Theme.of(context).textTheme.titleMedium),
-          Text('← スワイプで日付移動 →',
-              style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
-    );
-  }
-
-  // 時間移動バー（左右タップ・1時間単位）。
-  Widget _buildHourBar() {
-    return Row(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
-          tooltip: '1時間前',
-          onPressed: _hour > 0 ? () => _changeHour(-1) : null,
-        ),
-        Expanded(
-          child: Center(
-            child: Text(
-              '$_slotLabel 〜 ${_hour.toString().padLeft(2, '0')}:59',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
-          tooltip: '1時間後',
-          onPressed: _hour < 23 ? () => _changeHour(1) : null,
-        ),
       ],
     );
   }
@@ -312,58 +315,24 @@ class _Avatar extends StatelessWidget {
     required this.name,
     this.iconUrl,
     this.radius = 16,
-    this.dimmed = false,
   });
 
   final String name;
   final String? iconUrl;
   final double radius;
-  final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
-    final base = iconUrl != null
-        ? CircleAvatar(radius: radius, backgroundImage: NetworkImage(iconUrl!))
-        : CircleAvatar(
-            radius: radius,
-            backgroundColor: _colorFor(name),
-            foregroundColor: Colors.white,
-            child: Text(
-              name.isNotEmpty ? name[0] : '?',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: radius * 0.8,
-              ),
-            ),
-          );
-    return Opacity(opacity: dimmed ? 0.35 : 1, child: base);
-  }
-}
-
-// 上部のメンバーアバター横並び。未投稿のメンバーは薄く表示する。
-class _MemberAvatarRow extends StatelessWidget {
-  const _MemberAvatarRow({required this.members, required this.postedUserIds});
-
-  final List<AppUser> members;
-  final Set<String> postedUserIds;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: members.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 12),
-        itemBuilder: (context, i) {
-          final member = members[i];
-          return _Avatar(
-            name: member.name,
-            iconUrl: member.iconUrl,
-            radius: 22,
-            dimmed: !postedUserIds.contains(member.id),
-          );
-        },
+    if (iconUrl != null) {
+      return CircleAvatar(radius: radius, backgroundImage: NetworkImage(iconUrl!));
+    }
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: _colorFor(name),
+      foregroundColor: Colors.white,
+      child: Text(
+        name.isNotEmpty ? name[0] : '?',
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: radius * 0.8),
       ),
     );
   }
@@ -410,14 +379,6 @@ class _MemberPostCardState extends State<_MemberPostCard> {
     }
   }
 
-  void _toggle() {
-    final controller = _controller;
-    if (controller == null || !_initialized) return;
-    setState(() {
-      controller.value.isPlaying ? controller.pause() : controller.play();
-    });
-  }
-
   @override
   void dispose() {
     _controller?.dispose();
@@ -427,53 +388,44 @@ class _MemberPostCardState extends State<_MemberPostCard> {
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
+    // タップは時間移動に使うため、カード自体ではタップを受けない（自動再生・ループ）。
     return _CardFrame(
-      child: GestureDetector(
-        onTap: _toggle,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (_failed)
-              const ColoredBox(
-                color: Colors.black87,
-                child: Center(
-                  child: Icon(Icons.error_outline,
-                      color: Colors.white54, size: 40),
-                ),
-              )
-            else if (_initialized && controller != null)
-              FittedBox(
-                fit: BoxFit.cover,
-                child: RotatedBox(
-                  quarterTurns: 3,
-                  child: SizedBox(
-                    width: controller.value.size.width,
-                    height: controller.value.size.height,
-                    child: VideoPlayer(controller),
-                  ),
-                ),
-              )
-            else
-              const ColoredBox(
-                color: Colors.black87,
-                child: Center(
-                  child: CircularProgressIndicator(color: Colors.white),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (_failed)
+            const ColoredBox(
+              color: Colors.black87,
+              child: Center(
+                child: Icon(Icons.error_outline,
+                    color: Colors.white54, size: 40),
+              ),
+            )
+          else if (_initialized && controller != null)
+            FittedBox(
+              fit: BoxFit.cover,
+              child: RotatedBox(
+                quarterTurns: 3,
+                child: SizedBox(
+                  width: controller.value.size.width,
+                  height: controller.value.size.height,
+                  child: VideoPlayer(controller),
                 ),
               ),
-            _NameOverlay(
-              name: widget.post.userName,
-              iconUrl: widget.post.userIconUrl,
+            )
+          else
+            const ColoredBox(
+              color: Colors.black87,
+              child: Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
             ),
-            _TimeOverlay(label: widget.slotLabel),
-            if (_initialized &&
-                controller != null &&
-                !controller.value.isPlaying)
-              const Center(
-                child: Icon(Icons.play_circle_fill,
-                    size: 56, color: Colors.white70),
-              ),
-          ],
-        ),
+          _NameOverlay(
+            name: widget.post.userName,
+            iconUrl: widget.post.userIconUrl,
+          ),
+          _TimeOverlay(label: widget.slotLabel),
+        ],
       ),
     );
   }
