@@ -1,0 +1,140 @@
+-- Setlog風アプリ Supabaseスキーマ
+-- Supabase ダッシュボードの SQL Editor に貼り付けて実行する。
+-- テーブル定義は docs/データベース設計.md と対応。
+
+-- ============================================================
+-- テーブル
+-- ============================================================
+
+-- users: ユーザー情報（Supabase AuthのユーザーIDと対応）
+create table if not exists public.users (
+  id uuid primary key references auth.users (id) on delete cascade,
+  name text not null,
+  icon_url text,
+  created_at timestamptz not null default now()
+);
+
+-- groups: グループ
+create table if not exists public.groups (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  invite_code text not null unique,
+  owner_id uuid not null references public.users (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+-- group_members: グループ参加メンバー
+create table if not exists public.group_members (
+  id uuid primary key default gen_random_uuid(),
+  group_id uuid not null references public.groups (id) on delete cascade,
+  user_id uuid not null references public.users (id) on delete cascade,
+  joined_at timestamptz not null default now(),
+  unique (group_id, user_id)
+);
+
+-- posts: 投稿（動画本体）。共有先は post_shares で管理する。
+create table if not exists public.posts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users (id) on delete cascade,
+  video_url text not null,
+  created_at timestamptz not null default now()
+);
+
+-- post_shares: 投稿の共有先グループ。1投稿を複数グループへ共有できる。
+-- 同一グループ・同一日・同一時間帯への重複投稿を防ぐ（1グループ1時間1回ルール）。
+create table if not exists public.post_shares (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.posts (id) on delete cascade,
+  group_id uuid not null references public.groups (id) on delete cascade,
+  shared_hour int not null check (shared_hour between 0 and 23),
+  created_at timestamptz not null default now()
+);
+
+-- 1グループにつき同じ日付・同じ時間帯は1回まで（投稿ルール）
+create unique index if not exists post_shares_group_hour_unique
+  on public.post_shares (group_id, shared_hour, (created_at::date));
+
+-- 一覧取得を速くするためのインデックス
+create index if not exists posts_user_created_idx
+  on public.posts (user_id, created_at desc);
+create index if not exists post_shares_group_idx
+  on public.post_shares (group_id, created_at desc);
+create index if not exists group_members_user_idx
+  on public.group_members (user_id);
+
+-- ============================================================
+-- RLS（Row Level Security）
+-- ============================================================
+-- 方針: ログインユーザーは読み取り可。書き込みは本人のデータのみ。
+-- ハッカソンMVP向けに緩めの設定。発表後に必要なら厳格化する。
+
+alter table public.users enable row level security;
+alter table public.groups enable row level security;
+alter table public.group_members enable row level security;
+alter table public.posts enable row level security;
+alter table public.post_shares enable row level security;
+
+-- users: 全員読める / 自分の行だけ作成・更新できる
+create policy "users_select_all" on public.users
+  for select using (true);
+create policy "users_insert_self" on public.users
+  for insert with check (auth.uid() = id);
+create policy "users_update_self" on public.users
+  for update using (auth.uid() = id);
+
+-- groups: ログインユーザーは読める / 作成は本人がownerのときのみ
+create policy "groups_select_all" on public.groups
+  for select using (auth.role() = 'authenticated');
+create policy "groups_insert_owner" on public.groups
+  for insert with check (auth.uid() = owner_id);
+
+-- group_members: ログインユーザーは読める / 参加・退出は自分の行のみ
+create policy "group_members_select_all" on public.group_members
+  for select using (auth.role() = 'authenticated');
+create policy "group_members_insert_self" on public.group_members
+  for insert with check (auth.uid() = user_id);
+create policy "group_members_delete_self" on public.group_members
+  for delete using (auth.uid() = user_id);
+
+-- posts: ログインユーザーは読める / 投稿・削除は本人のみ
+create policy "posts_select_all" on public.posts
+  for select using (auth.role() = 'authenticated');
+create policy "posts_insert_self" on public.posts
+  for insert with check (auth.uid() = user_id);
+create policy "posts_delete_self" on public.posts
+  for delete using (auth.uid() = user_id);
+
+-- post_shares: ログインユーザーは読める / 作成は投稿の所有者のみ
+create policy "post_shares_select_all" on public.post_shares
+  for select using (auth.role() = 'authenticated');
+create policy "post_shares_insert_owner" on public.post_shares
+  for insert with check (
+    exists (
+      select 1 from public.posts p
+      where p.id = post_id and p.user_id = auth.uid()
+    )
+  );
+
+-- ============================================================
+-- Storage バケット
+-- ============================================================
+-- 動画とアイコン用のバケットを作成（公開読み取り）。
+
+insert into storage.buckets (id, name, public)
+values ('videos', 'videos', true)
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
+values ('icons', 'icons', true)
+on conflict (id) do nothing;
+
+-- 認証ユーザーはアップロード可 / 読み取りは公開
+create policy "videos_read_public" on storage.objects
+  for select using (bucket_id = 'videos');
+create policy "videos_insert_auth" on storage.objects
+  for insert with check (bucket_id = 'videos' and auth.role() = 'authenticated');
+
+create policy "icons_read_public" on storage.objects
+  for select using (bucket_id = 'icons');
+create policy "icons_insert_auth" on storage.objects
+  for insert with check (bucket_id = 'icons' and auth.role() = 'authenticated');
