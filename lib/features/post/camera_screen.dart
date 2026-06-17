@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/navigation.dart';
 import 'post_provider.dart';
 
 class CameraScreen extends ConsumerStatefulWidget {
@@ -138,7 +139,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
       final file = await controller.stopVideoRecording();
       setState(() => _isRecording = false);
       ref.read(recordedVideoProvider.notifier).set(file);
-      if (mounted) context.go('/send');
+      if (mounted) context.push('/send');
     } catch (e) {
       setState(() {
         _isRecording = false;
@@ -155,7 +156,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         title: const Text('撮影'),
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => context.go('/home'),
+          onPressed: () => context.backOrHome(),
         ),
       ),
       body: SafeArea(

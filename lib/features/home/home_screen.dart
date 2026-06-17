@@ -55,7 +55,7 @@ class _ActionButtons extends StatelessWidget {
       children: [
         Expanded(
           child: FilledButton.icon(
-            onPressed: () => context.go('/camera'),
+            onPressed: () => context.push('/camera'),
             icon: const Icon(Icons.videocam),
             label: const Text('ログ作成'),
           ),
@@ -63,7 +63,7 @@ class _ActionButtons extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: () => context.go('/group/create'),
+            onPressed: () => context.push('/group/create'),
             icon: const Icon(Icons.add),
             label: const Text('グループ作成'),
           ),
@@ -71,7 +71,7 @@ class _ActionButtons extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: () => context.go('/group/join'),
+            onPressed: () => context.push('/group/join'),
             icon: const Icon(Icons.login),
             label: const Text('グループ参加'),
           ),
@@ -162,7 +162,7 @@ class _GroupsSection extends StatelessWidget {
                   leading: const Icon(Icons.group),
                   title: Text(group.name),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.go('/group/${group.id}'),
+                  onTap: () => context.push('/group/${group.id}'),
                 ),
               ),
           ],

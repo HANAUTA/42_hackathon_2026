@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/navigation.dart';
 import '../../models/group.dart';
 import 'post_provider.dart';
 import 'video_preview_factory.dart';
@@ -55,7 +56,7 @@ class _SendScreenState extends ConsumerState<SendScreen> {
   // 撮影画面へ戻る。動画は破棄する。
   void _cancel() {
     ref.read(recordedVideoProvider.notifier).clear();
-    context.go('/camera');
+    context.backOrHome();
   }
 
   Future<void> _send() async {
@@ -91,8 +92,8 @@ class _SendScreenState extends ConsumerState<SendScreen> {
             children: [
               const Text('動画がありません'),
               TextButton(
-                onPressed: () => context.go('/camera'),
-                child: const Text('撮影画面へ'),
+                onPressed: () => context.backOrHome(),
+                child: const Text('撮影画面へ戻る'),
               ),
             ],
           ),
