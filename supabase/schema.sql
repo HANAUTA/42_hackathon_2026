@@ -1,13 +1,25 @@
 -- Setlog風アプリ Supabaseスキーマ
 -- Supabase ダッシュボードの SQL Editor に貼り付けて実行する。
 -- テーブル定義は docs/データベース設計.md と対応。
+--
+-- このスクリプトは「再実行可能」。先頭で既存テーブルを削除してから作り直すため、
+-- 何度流しても同じ状態になる（※開発初期向け。データが入った後は実行しないこと）。
+
+-- ============================================================
+-- クリーンスタート（既存があれば削除）
+-- ============================================================
+drop table if exists public.post_shares cascade;
+drop table if exists public.posts cascade;
+drop table if exists public.group_members cascade;
+drop table if exists public.groups cascade;
+drop table if exists public.users cascade;
 
 -- ============================================================
 -- テーブル
 -- ============================================================
 
 -- users: ユーザー情報（Supabase AuthのユーザーIDと対応）
-create table if not exists public.users (
+create table public.users (
   id uuid primary key references auth.users (id) on delete cascade,
   name text not null,
   icon_url text,
@@ -15,7 +27,7 @@ create table if not exists public.users (
 );
 
 -- groups: グループ
-create table if not exists public.groups (
+create table public.groups (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   invite_code text not null unique,
@@ -24,7 +36,7 @@ create table if not exists public.groups (
 );
 
 -- group_members: グループ参加メンバー
-create table if not exists public.group_members (
+create table public.group_members (
   id uuid primary key default gen_random_uuid(),
   group_id uuid not null references public.groups (id) on delete cascade,
   user_id uuid not null references public.users (id) on delete cascade,
@@ -33,7 +45,7 @@ create table if not exists public.group_members (
 );
 
 -- posts: 投稿（動画本体）。共有先は post_shares で管理する。
-create table if not exists public.posts (
+create table public.posts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users (id) on delete cascade,
   video_url text not null,
@@ -41,25 +53,26 @@ create table if not exists public.posts (
 );
 
 -- post_shares: 投稿の共有先グループ。1投稿を複数グループへ共有できる。
--- 同一グループ・同一日・同一時間帯への重複投稿を防ぐ（1グループ1時間1回ルール）。
-create table if not exists public.post_shares (
+-- shared_date(日付) と shared_hour(時) を明示的に持ち、
+-- 「1グループ・同じ日・同じ時間帯は1回まで」を一意制約で保証する（投稿ルール）。
+-- 日付を式(created_at::date)で持つとIMMUTABLEでなくインデックスに使えないため、
+-- 日本時間の日付をカラムとして保存する。
+create table public.post_shares (
   id uuid primary key default gen_random_uuid(),
   post_id uuid not null references public.posts (id) on delete cascade,
   group_id uuid not null references public.groups (id) on delete cascade,
+  shared_date date not null default ((now() at time zone 'Asia/Tokyo')::date),
   shared_hour int not null check (shared_hour between 0 and 23),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  unique (group_id, shared_date, shared_hour)
 );
 
--- 1グループにつき同じ日付・同じ時間帯は1回まで（投稿ルール）
-create unique index if not exists post_shares_group_hour_unique
-  on public.post_shares (group_id, shared_hour, (created_at::date));
-
 -- 一覧取得を速くするためのインデックス
-create index if not exists posts_user_created_idx
+create index posts_user_created_idx
   on public.posts (user_id, created_at desc);
-create index if not exists post_shares_group_idx
+create index post_shares_group_idx
   on public.post_shares (group_id, created_at desc);
-create index if not exists group_members_user_idx
+create index group_members_user_idx
   on public.group_members (user_id);
 
 -- ============================================================
@@ -128,7 +141,12 @@ insert into storage.buckets (id, name, public)
 values ('icons', 'icons', true)
 on conflict (id) do nothing;
 
--- 認証ユーザーはアップロード可 / 読み取りは公開
+-- 認証ユーザーはアップロード可 / 読み取りは公開（再実行できるよう先に削除）
+drop policy if exists "videos_read_public" on storage.objects;
+drop policy if exists "videos_insert_auth" on storage.objects;
+drop policy if exists "icons_read_public" on storage.objects;
+drop policy if exists "icons_insert_auth" on storage.objects;
+
 create policy "videos_read_public" on storage.objects
   for select using (bucket_id = 'videos');
 create policy "videos_insert_auth" on storage.objects
