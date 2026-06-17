@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/group.dart';
 import '../../models/post.dart';
+import '../auth/auth_provider.dart';
 import 'home_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -18,7 +19,16 @@ class HomeScreen extends ConsumerWidget {
     final groupsAsync = ref.watch(myGroupsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ホーム')),
+      appBar: AppBar(
+        title: const Text('ホーム'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'ログアウト',
+            onPressed: () => _confirmLogout(context, ref),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(myPostsProvider);
@@ -44,6 +54,30 @@ class HomeScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  // ログアウト確認 → サインアウト → ログイン画面へ。
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('ログアウトしますか？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('ログアウト'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await ref.read(authControllerProvider.notifier).signOut();
+    if (context.mounted) context.go('/login');
   }
 }
 

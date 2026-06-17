@@ -1,5 +1,5 @@
-// ログイン画面。メールでのログイン / 新規登録を行う。
-// Googleログインはボタンのみ（後回しのため未実装）。
+// ログイン画面。メールアドレスとパスワードでのログイン / 新規登録を行う。
+// 1画面でモードを切り替える（新規登録時はパスワード確認欄を表示）。
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,15 +20,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
 
   // true: 新規登録モード / false: ログインモード
   bool _isSignUp = false;
+  // パスワードを伏せ字にするか（目のアイコンで切替）。
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmController.dispose();
     super.dispose();
+  }
+
+  // ログイン/新規登録を切り替える。入力中の確認欄はクリアする。
+  void _toggleMode() {
+    setState(() {
+      _isSignUp = !_isSignUp;
+      _confirmController.clear();
+    });
   }
 
   Future<void> _submit() async {
@@ -72,7 +84,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ログイン')),
+      appBar: AppBar(title: Text(_isSignUp ? '新規登録' : 'ログイン')),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -99,15 +111,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
                       labelText: 'パスワード',
-                      border: OutlineInputBorder(),
+                      helperText: '6文字以上',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility),
+                        tooltip: _obscurePassword ? '表示' : '非表示',
+                        onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword),
+                      ),
                     ),
                     validator: (v) => (v == null || v.length < 6)
                         ? 'パスワードは6文字以上で入力してください'
                         : null,
                   ),
+                  // 新規登録時のみ、入力ミス防止のためパスワード確認欄を表示。
+                  if (_isSignUp) ...[
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _confirmController,
+                      obscureText: _obscurePassword,
+                      decoration: const InputDecoration(
+                        labelText: 'パスワード（確認）',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) => (v != _passwordController.text)
+                          ? 'パスワードが一致しません'
+                          : null,
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -123,25 +159,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: isLoading
-                        ? null
-                        : () => setState(() => _isSignUp = !_isSignUp),
+                    onPressed: isLoading ? null : _toggleMode,
                     child: Text(
                       _isSignUp ? 'アカウントをお持ちの方はログイン' : 'アカウントが無い方は新規登録',
-                    ),
-                  ),
-                  const Divider(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      // Googleログインは後回しのため未実装。
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Googleログインは未実装です')),
-                        );
-                      },
-                      icon: const Icon(Icons.login),
-                      label: const Text('Googleでログイン'),
                     ),
                   ),
                 ],
