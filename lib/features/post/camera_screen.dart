@@ -51,15 +51,26 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
 
   Future<void> _setupCameras() async {
     try {
-      _cameras = await availableCameras();
-      if (_cameras.isEmpty) {
+      final all = await availableCameras();
+      if (all.isEmpty) {
         setState(() {
           _error = '利用可能なカメラが見つかりません';
           _initializing = false;
         });
         return;
       }
-      await _initController(_cameraIndex);
+      // iPhoneは背面が広角/超広角/望遠など複数返るため、
+      // 背面・前面それぞれ1台ずつに絞って切替対象を [背面, 前面] に固定する。
+      final back = all.where((c) => c.lensDirection == CameraLensDirection.back);
+      final front =
+          all.where((c) => c.lensDirection == CameraLensDirection.front);
+      _cameras = [
+        if (back.isNotEmpty) back.first,
+        if (front.isNotEmpty) front.first,
+      ];
+      if (_cameras.isEmpty) _cameras = all;
+
+      await _initController(0);
     } catch (e) {
       setState(() {
         _error = 'カメラの起動に失敗しました: $e';
@@ -69,7 +80,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   }
 
   Future<void> _initController(int index) async {
-    final previous = _controller;
+    // iOSは複数のキャプチャセッションを同時に開けないため、
+    // 新しいカメラを起動する前に必ず旧コントローラを破棄する（切替で死ぬのを防ぐ）。
+    await _controller?.dispose();
+    _controller = null;
+
     final controller = CameraController(
       _cameras[index],
       ResolutionPreset.medium,
@@ -77,7 +92,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     );
     try {
       await controller.initialize();
-      await previous?.dispose();
       if (!mounted) {
         await controller.dispose();
         return;
@@ -87,7 +101,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         _cameraIndex = index;
         _initializing = false;
       });
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[camera] 初期化失敗 index=$index '
+          'dir=${_cameras[index].lensDirection}: $e');
+      debugPrint('[camera] $st');
+      if (!mounted) return;
       setState(() {
         _error = 'カメラの初期化に失敗しました: $e';
         _initializing = false;
