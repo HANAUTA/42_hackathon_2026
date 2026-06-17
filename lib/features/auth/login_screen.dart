@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/supabase_client.dart';
 import 'auth_errors.dart';
 import 'auth_provider.dart';
 
@@ -56,18 +55,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     if (!mounted) return;
-    // 処理結果はエラーなら ref.listen 側でSnackBar表示する。
+    // エラーは ref.listen 側でSnackBar表示する。
     if (ref.read(authControllerProvider).hasError) return;
 
-    // セッションが張れていれば分岐判定（スプラッシュ）へ。
-    // 新規登録でメール確認が必要な設定の場合はセッションが無いので案内を出す。
-    if (supabase.auth.currentUser != null) {
-      context.go('/splash');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('確認メールを送信しました。メール内のリンクから認証してください。')),
-      );
-    }
+    // メール確認は使わない設定なので、成功すれば即セッションが張られる。
+    // スプラッシュで「プロフィール未登録→/profile / 登録済み→/home」を振り分ける。
+    context.go('/splash');
   }
 
   @override
