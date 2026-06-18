@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/cached_video.dart';
+import '../../core/jst.dart';
 import '../../models/app_user.dart';
 import '../../models/group.dart';
 import 'group_provider.dart';
@@ -44,7 +45,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
+    final now = jstNow();
     _date = DateTime(now.year, now.month, now.day);
     _hour = now.hour;
   }
@@ -63,7 +64,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
 
   // 今日・昨日・それ以外は曜日で表す（絶対日付は表示しない）。
   String get _dayLabel {
-    final now = DateTime.now();
+    final now = jstNow();
     final today = DateTime(now.year, now.month, now.day);
     final diff = today.difference(_date).inDays;
     if (diff == 0) return '今日';
@@ -74,14 +75,14 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
 
   // 未来へは進めない。今日より前の日付のときだけ翌日へ移動できる。
   bool get _canGoForwardDate {
-    final now = DateTime.now();
+    final now = jstNow();
     final today = DateTime(now.year, now.month, now.day);
     return _date.isBefore(today);
   }
 
   // 今日の場合は現在時刻より先の時間帯へは進めない。
   bool get _canGoForwardHour {
-    final now = DateTime.now();
+    final now = jstNow();
     final today = DateTime(now.year, now.month, now.day);
     if (_date == today) return _hour < now.hour;
     return _hour < 23;

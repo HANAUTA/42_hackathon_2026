@@ -150,7 +150,10 @@ class GroupService {
 
   Future<Group> fetchGroup(String groupId) async {
     final json =
-        await supabase.from('groups').select().eq('id', groupId).single();
+        await supabase.from('groups').select().eq('id', groupId).maybeSingle();
+    if (json == null) {
+      throw Exception('グループが見つかりません');
+    }
     return Group.fromJson(json);
   }
 

@@ -222,6 +222,7 @@ class _VlogFeedState extends State<_VlogFeed> {
   bool _initialized = false;
   bool _hasError = false;
   bool _transitioning = false;
+  int _loadGen = 0;
 
   @override
   void initState() {
@@ -238,6 +239,7 @@ class _VlogFeedState extends State<_VlogFeed> {
   }
 
   Future<void> _loadVideo(int index) async {
+    final gen = ++_loadGen;
     _transitioning = false;
 
     // 初回（表示する動画がまだ無い）だけスピナーを出す。
@@ -255,7 +257,7 @@ class _VlogFeedState extends State<_VlogFeed> {
       final controller =
           await createCachedVideoController(widget.posts[index].videoUrl);
       await controller.initialize();
-      if (!mounted) {
+      if (!mounted || gen != _loadGen) {
         await controller.dispose();
         return;
       }
@@ -277,8 +279,9 @@ class _VlogFeedState extends State<_VlogFeed> {
       await controller.play();
       await old?.dispose();
       _prefetchNext(index);
-    } catch (_) {
-      if (!mounted) return;
+    } catch (e) {
+      debugPrint('動画の読み込みに失敗: $e');
+      if (!mounted || gen != _loadGen) return;
       setState(() => _hasError = true);
       if (widget.posts.length > 1) {
         Future.delayed(const Duration(seconds: 2), _playNext);

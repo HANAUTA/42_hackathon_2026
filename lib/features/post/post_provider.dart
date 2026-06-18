@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/jst.dart';
 import '../../core/supabase_client.dart';
 import '../../models/group.dart';
 
@@ -53,14 +54,14 @@ final sendTargetsProvider = FutureProvider.autoDispose<SendTargets>((ref) async 
     return const SendTargets(groups: [], postedGroupIds: {});
   }
 
-  final now = _jstNow();
-  final today = _dateString(now);
+  final now = jstNow();
+  final today = jstDateString(now);
   final hour = now.hour;
 
   final shareRows = await supabase
       .from('post_shares')
-      .select('group_id')
-      .eq('user_id', userId)
+      .select('group_id, posts!inner(user_id)')
+      .eq('posts.user_id', userId)
       .eq('shared_date', today)
       .eq('shared_hour', hour)
       .inFilter('group_id', [for (final g in groups) g.id]);
@@ -97,7 +98,7 @@ class PostController {
 
     final bytes = await video.readAsBytes();
     final ext = _extension(video);
-    final now = _jstNow();
+    final now = jstNow();
     final path =
         '$userId/${DateTime.now().millisecondsSinceEpoch}.$ext';
 
@@ -122,7 +123,7 @@ class PostController {
             'post_id': postId,
             'group_id': groupId,
             'user_id': userId,
-            'shared_date': _dateString(now),
+            'shared_date': jstDateString(now),
             'shared_hour': now.hour,
           },
       ]);
@@ -132,13 +133,6 @@ class PostController {
   }
 }
 
-// 日本時間の現在時刻を求める。サーバ/端末のタイムゾーンに依存させない。
-DateTime _jstNow() => DateTime.now().toUtc().add(const Duration(hours: 9));
-
-String _dateString(DateTime d) =>
-    '${d.year.toString().padLeft(4, '0')}-'
-    '${d.month.toString().padLeft(2, '0')}-'
-    '${d.day.toString().padLeft(2, '0')}';
 
 // 動画ファイルの拡張子を求める。Webは webm、その他は mp4 を既定とする。
 String _extension(XFile video) {
