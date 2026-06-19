@@ -8,8 +8,49 @@
 
 ## 必要なもの
 
-- Flutter（SDK 3.11.5 以上）
+- Flutter（SDK 3.11.5 以上）… 下の「Flutter のインストール」を参照
 - Supabase アカウント（無料・クレジットカード不要）
+
+---
+
+## Flutter のインストール
+
+> すでに Flutter が入っている人はこの章を飛ばしてOK。
+> 入っているか確認するには `flutter --version` を実行。
+
+動作確認は **Chrome（Web）** に統一するのがおすすめ。OSの差を気にせず全員同じ手順で動かせる。
+（※ カメラ撮影だけは Web だと不安定なことがあるので、必要なら Android 実機で確認）
+
+### Windows の場合
+
+1. [Flutter公式（Windows）](https://docs.flutter.dev/get-started/install/windows) を開く
+2. Flutter SDK の zip をダウンロードして展開（例: `C:\src\flutter`）
+3. 環境変数 **PATH** に `C:\src\flutter\bin` を追加
+4. PowerShell を開き直して `flutter doctor` を実行
+5. Git が未インストールなら [Git for Windows](https://git-scm.com/download/win) を入れる
+
+> Android 実機/エミュレータで動かしたい場合のみ Android Studio も入れる。
+> **Windows では iOS アプリはビルドできない**（Apple の制約）。Web か Android を使う。
+
+### Mac の場合
+
+1. Homebrew が入っていれば一番楽：
+
+   ```bash
+   brew install --cask flutter
+   ```
+
+   （Homebrew が無い場合は [Flutter公式（macOS）](https://docs.flutter.dev/get-started/install/macos) から zip を入手して展開し、PATH に `flutter/bin` を追加）
+2. ターミナルで `flutter doctor` を実行
+3. iOS 実機/シミュレータで動かしたい場合のみ **Xcode** を App Store から入れる
+
+### 共通：セットアップ確認
+
+```bash
+flutter doctor
+```
+
+緑のチェックが付いていればOK。`[!]` が出ても、使うターゲット（Chrome / Android）に関係する項目だけ解消すれば問題ない。
 
 ---
 
