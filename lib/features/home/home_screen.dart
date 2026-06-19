@@ -1,6 +1,7 @@
 // ホーム画面。自動再生Vlogフィードとグループ一覧を表示する。
 // フローティングナビとブランドヘッダーを備えたメイン画面。
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -364,16 +365,22 @@ class _VlogFeedState extends State<_VlogFeed> {
                     ),
                   )
                 else if (_initialized && controller != null)
-                  // 縦で撮影した動画を90度左回転して横向きで表示する
+                  // 縦で撮影した動画を90度回転して横向きで表示する
                   // （送信プレビュー・グループ詳細と向きを揃える）。
+                  // Webカメラはスマホと逆方向に倒れて録画されるため回転方向を変える。
                   FittedBox(
                     fit: BoxFit.cover,
-                    child: RotatedBox(
-                      quarterTurns: 3,
-                      child: SizedBox(
-                        width: controller.value.size.width,
-                        height: controller.value.size.height,
-                        child: VideoPlayer(controller),
+                    // Webは撮影プレビュー(鏡)と向きを揃えるため左右反転する。
+                    child: Transform.scale(
+                      scaleX: kIsWeb ? -1 : 1,
+                      scaleY: 1,
+                      child: RotatedBox(
+                        quarterTurns: kIsWeb ? 1 : 3,
+                        child: SizedBox(
+                          width: controller.value.size.width,
+                          height: controller.value.size.height,
+                          child: VideoPlayer(controller),
+                        ),
                       ),
                     ),
                   )

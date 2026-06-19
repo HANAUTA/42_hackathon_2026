@@ -1,6 +1,7 @@
 // アプリのエントリーポイント。
 // Supabase初期化 → Riverpodのスコープ設定 → ルーター付きアプリ起動を担当。
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -55,6 +56,23 @@ class SetlogApp extends StatelessWidget {
         useMaterial3: true,
       ),
       routerConfig: router,
+      builder: _wrapInPhoneFrame,
+    );
+  }
+
+  // Webは横長画面でも全画面をスマホ縦長(9:16)の枠に収め、左右を黒帯にする。
+  // 全画面で見た目を統一するため MaterialApp 全体に適用する。スマホは素通り。
+  Widget _wrapInPhoneFrame(BuildContext context, Widget? child) {
+    final content = child ?? const SizedBox.shrink();
+    if (!kIsWeb) return content;
+    return ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: 9 / 16,
+          child: ClipRect(child: content),
+        ),
+      ),
     );
   }
 }

@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -191,22 +192,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   // 縦長フレームに横向きで撮影する（プレビューは画面いっぱいにcover表示）。
   Widget _buildCameraView() {
     final controller = _controller!;
-    final mediaSize = MediaQuery.of(context).size;
-    // 画面いっぱいに歪みなくcover表示するためのスケール係数。
-    final scale =
-        1 / (controller.value.aspectRatio * mediaSize.aspectRatio);
 
     return Stack(
       children: [
-        Positioned.fill(
-          child: ClipRect(
-            child: Transform.scale(
-              scale: scale,
-              alignment: Alignment.center,
-              child: Center(child: CameraPreview(controller)),
-            ),
-          ),
-        ),
+        Positioned.fill(child: _buildPreview(controller)),
         // 撮影中・待機中は中央に横向きで現在時刻を表示する。
         // カウントダウン中は数字と被るため時刻は隠す。
         if (_countdown == 0)
@@ -250,6 +239,35 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
           child: _buildControls(),
         ),
       ],
+    );
+  }
+
+  // カメラプレビューを画面いっぱいにcover表示する。
+  // Web のカメラは横長で返るため、縦長画面に合わせて切り抜いて表示する。
+  // スマホは従来通りスケール係数で歪みなくcover表示する。
+  Widget _buildPreview(CameraController controller) {
+    if (kIsWeb) {
+      // 横長のWebカメラ映像を、縦長枠に回転させずcoverで切り抜いて表示する（鏡のまま）。
+      final preview = controller.value.previewSize;
+      return ClipRect(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: preview?.width ?? 16,
+            height: preview?.height ?? 9,
+            child: CameraPreview(controller),
+          ),
+        ),
+      );
+    }
+    final mediaSize = MediaQuery.of(context).size;
+    final scale = 1 / (controller.value.aspectRatio * mediaSize.aspectRatio);
+    return ClipRect(
+      child: Transform.scale(
+        scale: scale,
+        alignment: Alignment.center,
+        child: Center(child: CameraPreview(controller)),
+      ),
     );
   }
 

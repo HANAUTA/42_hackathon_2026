@@ -2,6 +2,7 @@
 // 投稿済みは動画カード、未投稿は枠（プレースホルダー）で表示する。
 // 時間移動（左右タップ）／日付移動（左右スワイプ）／メンバー・招待・退出も担当。
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -407,12 +408,18 @@ class _MemberPostCardState extends State<_MemberPostCard> {
           else if (_initialized && controller != null)
             FittedBox(
               fit: BoxFit.cover,
-              child: RotatedBox(
-                quarterTurns: 3,
-                child: SizedBox(
-                  width: controller.value.size.width,
-                  height: controller.value.size.height,
-                  child: VideoPlayer(controller),
+              // Webは撮影プレビュー(鏡)と向きを揃えるため左右反転する。
+              child: Transform.scale(
+                scaleX: kIsWeb ? -1 : 1,
+                scaleY: 1,
+                // Webカメラはスマホと逆方向に倒れて録画されるため回転方向を変える。
+                child: RotatedBox(
+                  quarterTurns: kIsWeb ? 1 : 3,
+                  child: SizedBox(
+                    width: controller.value.size.width,
+                    height: controller.value.size.height,
+                    child: VideoPlayer(controller),
+                  ),
                 ),
               ),
             )

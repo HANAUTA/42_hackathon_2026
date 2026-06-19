@@ -2,6 +2,7 @@
 // 1時間制限で送信済みのグループはグレーアウトして選択不可にする。
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -144,20 +145,36 @@ class _SendScreenState extends ConsumerState<SendScreen> {
     final controller = _videoController;
     return Container(
       color: Colors.black,
-      height: 220,
       width: double.infinity,
       child: controller != null && controller.value.isInitialized
-          ? Center(
-              // 縦で撮影した動画を90度左回転して横向きで再生する。
-              child: RotatedBox(
-                quarterTurns: 3,
-                child: AspectRatio(
-                  aspectRatio: controller.value.aspectRatio,
-                  child: VideoPlayer(controller),
+          // 撮影時(縦長フレーム)の見た目を90度回転した横長(16:9)で表示する。
+          // 動画全体ではなく、撮影時と同じ枠に切り抜く（ホーム・グループ詳細と統一）。
+          ? AspectRatio(
+              aspectRatio: 16 / 9,
+              child: ClipRect(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  // Webは撮影プレビュー(鏡)と向きを揃えるため左右反転する。
+                  child: Transform.scale(
+                    scaleX: kIsWeb ? -1 : 1,
+                    scaleY: 1,
+                    // Webカメラはスマホと逆方向に倒れて録画されるため回転方向を変える。
+                    child: RotatedBox(
+                      quarterTurns: kIsWeb ? 1 : 3,
+                      child: SizedBox(
+                        width: controller.value.size.width,
+                        height: controller.value.size.height,
+                        child: VideoPlayer(controller),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             )
-          : const Center(child: CircularProgressIndicator()),
+          : const SizedBox(
+              height: 220,
+              child: Center(child: CircularProgressIndicator()),
+            ),
     );
   }
 
