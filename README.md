@@ -1,62 +1,72 @@
-# Setlog
+# Setlog（セットログ）
 
-グループで短い動画（Vlog）を共有するアプリ。Flutter + Supabase で構築。
+グループで短い動画を共有するスマホアプリです。
+このアプリは **Flutter**（アプリを作る道具）と **Supabase**（データを保存する場所）で動いています。
 
-各自が自分の Supabase プロジェクトを用意し、`.env` に接続情報を貼るだけで動く。
-
----
-
-## 必要なもの
-
-- Flutter（SDK 3.11.5 以上）… 下の「Flutter のインストール」を参照
-- Supabase アカウント（無料・クレジットカード不要）
+このページの通りに上から順番に進めれば、自分のパソコンでアプリを動かせます。
+**焦らず1ステップずつ**進めてください。
 
 ---
 
-## Flutter のインストール
+## 全体の流れ（先に地図を見ておこう）
 
-> すでに Flutter が入っている人はこの章を飛ばしてOK。
-> 入っているか確認するには `flutter --version` を実行。
+やることは大きく4つです。
 
-動作確認は **Chrome（Web）** に統一するのがおすすめ。OSの差を気にせず全員同じ手順で動かせる。
-（※ カメラ撮影だけは Web だと不安定なことがあるので、必要なら Android 実機で確認）
+1. **Flutter を入れる**（アプリを動かす道具の準備）
+2. **このアプリをダウンロードする**
+3. **Supabase を準備する**（データの保存場所を作る）
+4. **アプリを起動する**
 
-### Windows の場合
+> 💡 動作確認は **Chrome（ブラウザ）** で行います。
+> WindowsでもMacでも同じやり方でできるので、まずはこれで進めましょう。
 
-1. [Flutter公式（Windows）](https://docs.flutter.dev/get-started/install/windows) を開く
-2. Flutter SDK の zip をダウンロードして展開（例: `C:\src\flutter`）
-3. 環境変数 **PATH** に `C:\src\flutter\bin` を追加
-4. PowerShell を開き直して `flutter doctor` を実行
-5. Git が未インストールなら [Git for Windows](https://git-scm.com/download/win) を入れる
+---
 
-> Android 実機/エミュレータで動かしたい場合のみ Android Studio も入れる。
-> **Windows では iOS アプリはビルドできない**（Apple の制約）。Web か Android を使う。
+## ステップ1：Flutter を入れる
 
-### Mac の場合
+> すでに入っている人は飛ばしてOK。
+> 確認するにはターミナル（Macは「ターミナル」、Windowsは「PowerShell」）で
+> 次を打ってバージョンが出れば入っています。
+>
+> ```bash
+> flutter --version
+> ```
 
-1. Homebrew が入っていれば一番楽：
+### 🪟 Windows の人
+
+1. [Flutter公式インストールページ（Windows）](https://docs.flutter.dev/get-started/install/windows) を開く
+2. ページの指示に従って Flutter をダウンロードし、`C:\src\flutter` などに展開する
+3. 展開した中の `flutter\bin` フォルダを、Windowsの「環境変数 PATH」に追加する
+   （やり方が分からなければ「Windows PATH 追加 方法」で検索）
+4. **PowerShellを開き直して** `flutter doctor` を打つ
+
+### 🍎 Mac の人
+
+1. ターミナルを開いて、次をコピペして実行する（Homebrewが必要です）
 
    ```bash
    brew install --cask flutter
    ```
 
-   （Homebrew が無い場合は [Flutter公式（macOS）](https://docs.flutter.dev/get-started/install/macos) から zip を入手して展開し、PATH に `flutter/bin` を追加）
-2. ターミナルで `flutter doctor` を実行
-3. iOS 実機/シミュレータで動かしたい場合のみ **Xcode** を App Store から入れる
+   ※ Homebrew が無い人は [Flutter公式インストールページ（Mac）](https://docs.flutter.dev/get-started/install/macos) を見てください
+2. `flutter doctor` を打つ
 
-### 共通：セットアップ確認
+### 入れ終わったら確認
+
+ターミナルで次を打ちます。
 
 ```bash
 flutter doctor
 ```
 
-緑のチェックが付いていればOK。`[!]` が出ても、使うターゲット（Chrome / Android）に関係する項目だけ解消すれば問題ない。
+✅ いくつか緑のチェックが出ればOKです。
+`[!]` マークが出ても、いまは気にしなくて大丈夫（Chromeが使えれば進めます）。
 
 ---
 
-## セットアップ手順
+## ステップ2：このアプリをダウンロードする
 
-### 1. クローンして依存を取得
+ターミナルで順番に打ちます。
 
 ```bash
 git clone <このリポジトリのURL>
@@ -64,101 +74,94 @@ cd 42_hackathon_2026
 flutter pub get
 ```
 
-### 2. Supabase プロジェクトを作成
+- `git clone` … アプリのコードを自分のパソコンに持ってくる
+- `cd` … そのフォルダの中に移動する
+- `flutter pub get` … アプリが必要とする部品をまとめて取ってくる
 
-1. [supabase.com](https://supabase.com) でログイン
-2. 「New project」でプロジェクトを作成（リージョンは Tokyo 推奨）
-3. パスワードは任意（後で使わない）
+---
 
-### 3. データベースを構築（SQL一発）
+## ステップ3：Supabase を準備する
 
-1. Supabase ダッシュボード左メニューの **SQL Editor** を開く
-2. [supabase/schema.sql](supabase/schema.sql) の中身を全部コピーして貼り付け
-3. **Run** で実行
+Supabase はデータ（ユーザー・動画など）を保存する場所です。**無料で使えて、クレジットカードもいりません。**
 
-これだけで以下が全部できる：
+### 3-1. プロジェクトを作る
 
-- テーブル（users / groups / group_members / posts / post_shares）
-- RLS（行レベルセキュリティ）ポリシー
-- Storage バケット（videos / icons）とアクセス権
+1. [supabase.com](https://supabase.com) にログイン
+2. 「New project」を押してプロジェクトを作る
+3. リージョン（地域）は **Tokyo** を選ぶのがおすすめ
+4. パスワードは適当でOK（あとで使いません）
 
-> ⚠️ `schema.sql` は再実行すると既存データを削除して作り直す。最初の1回だけ実行すること。
+### 3-2. データの入れ物を作る（コピペするだけ）
 
-### 4. メール確認をOFFにする（重要・忘れがち）
+1. 画面左のメニューから **SQL Editor** を開く
+2. このアプリの中の [supabase/schema.sql](supabase/schema.sql) ファイルを開いて、**中身を全部コピー**する
+3. SQL Editor に貼り付けて、**Run（実行）** ボタンを押す
 
-Supabase はデフォルトで新規登録時にメール確認が必須。これがONのままだと**サインアップしてもログインできず詰まる**。
+これで、データを保存する表（テーブル）や動画の置き場が一気にできあがります。
 
-1. ダッシュボード左メニュー **Authentication** → **Sign In / Providers**（または **Settings**）
-2. **Email** の項目で **Confirm email** を **OFF** にする
+> ⚠️ このファイルは「最初の1回だけ」実行してください。
+> もう一度実行すると、入れたデータが消えて作り直されます。
 
-> これはSQLでは設定できないコンソール操作。必ずやること。
+### 3-3. メール確認をOFFにする（ここ超重要！）
 
-### 5. `.env` を作成して接続情報を貼る
+このひと手間を忘れると、**新規登録してもログインできず詰まります。** 必ずやってください。
+
+1. 画面左のメニューから **Authentication** を開く
+2. **Sign In / Providers**（または Settings）を開く
+3. **Email** の設定の中にある **Confirm email** を **OFF** にする
+
+> なぜ必要？ Supabaseは初期設定だと「登録メールに届く確認リンクを押すまでログインできない」状態になっています。
+> ハッカソンでは確認メールを使わないので、OFFにしておきます。
+
+---
+
+## ステップ4：接続情報を設定してアプリを起動する
+
+最後に、「ステップ3で作ったSupabase」と「アプリ」をつなぎます。
+
+### 4-1. 設定ファイルを作る
+
+ターミナルで次を打つと、設定ファイルの雛形がコピーされます。
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` を開いて、Supabase の接続情報を貼る：
+### 4-2. 接続情報を貼る
+
+1. できた `.env` ファイルをエディタで開く
+2. Supabaseの画面で **Project Settings → API** を開く
+3. 次の2つをコピーして `.env` に貼る
 
 ```
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_URL=（Project URL を貼る）
+SUPABASE_ANON_KEY=（anon public キーを貼る）
 ```
 
-接続情報の場所：ダッシュボード左下 **Project Settings** → **API**
+> 🔑 `.env` には大事な情報が入るので、GitHubには上げません（設定済みなので気にしなくてOK）。
 
-- `SUPABASE_URL` = **Project URL**
-- `SUPABASE_ANON_KEY` = **anon public** key
-
-> `.env` は Git に上げない（`.gitignore` 済み）。
-
-### 6. 起動
+### 4-3. 起動！
 
 ```bash
-# Web（開発中の動作確認に便利）
 flutter run -d chrome
-
-# Android 実機
-flutter run
 ```
 
----
-
-## フォルダ構成
-
-```
-lib/
-├── main.dart        # エントリーポイント
-├── core/            # Supabase初期化・ルーティング
-├── features/        # 機能単位（auth / home / group / post）
-└── models/          # 共通データモデル
-
-supabase/
-├── schema.sql       # DB構築スクリプト（これを1回流す）
-└── seed.sql         # テスト用ダミーデータ（任意）
-
-docs/                # 仕様・設計ドキュメント
-```
+Chromeが立ち上がってアプリが表示されたら成功です🎉
 
 ---
 
-## テストデータを入れたい場合（任意）
+## 困ったときは
 
-[supabase/seed.sql](supabase/seed.sql) を SQL Editor に貼って実行するとダミーデータが入る。
-
----
-
-## よくあるトラブル
-
-| 症状 | 原因と対処 |
-|------|-----------|
-| 起動時にエラー画面が出る | `.env` の URL / key が未設定 or 間違い。手順5を確認 |
-| サインアップ後にログインできない | メール確認がONのまま。手順4を確認 |
-| 動画アップロードに失敗する | `schema.sql` を実行したか確認（Storageバケットが必要） |
+| こんな症状 | こうする |
+|------------|----------|
+| 起動したらエラー画面が出る | `.env` の URL・キーが間違っていないか確認（ステップ4） |
+| 新規登録したのにログインできない | メール確認のOFFを忘れている（ステップ3-3） |
+| 動画のアップロードに失敗する | `schema.sql` を実行したか確認（ステップ3-2） |
+| `flutter` コマンドが見つからない | Flutterのインストール or PATH設定を見直す（ステップ1） |
 
 ---
 
-## 開発ルール
+## もっと知りたい人へ
 
-コーディング規約は [docs/コーディング規約.md](docs/コーディング規約.md) を参照。
+- フォルダの構成や開発のルール → [docs/コーディング規約.md](docs/コーディング規約.md)
+- テスト用のダミーデータを入れたい → [supabase/seed.sql](supabase/seed.sql) を SQL Editor で実行
