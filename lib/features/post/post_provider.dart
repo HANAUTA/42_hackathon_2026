@@ -10,18 +10,28 @@ import '../../core/jst.dart';
 import '../../core/supabase_client.dart';
 import '../../models/group.dart';
 
-// 撮影直後の動画ファイルを送信画面へ受け渡すための保持先。
-// 取り消し・送信完了時に null に戻す。
-class RecordedVideoNotifier extends Notifier<XFile?> {
-  @override
-  XFile? build() => null;
+// 撮影直後の動画。ファイルと向き補正フラグ(needsFlip)を送信画面へ受け渡す。
+class RecordedVideo {
+  const RecordedVideo({required this.file, this.needsFlip = false});
 
-  void set(XFile? video) => state = video;
+  final XFile file;
+  // ファイル自体が上下逆に記録された動画(Android前面カメラ等)の補正フラグ。
+  final bool needsFlip;
+}
+
+// 撮影直後の動画を送信画面へ受け渡すための保持先。
+// 取り消し・送信完了時に null に戻す。
+class RecordedVideoNotifier extends Notifier<RecordedVideo?> {
+  @override
+  RecordedVideo? build() => null;
+
+  void set(RecordedVideo? video) => state = video;
   void clear() => state = null;
 }
 
 final recordedVideoProvider =
-    NotifierProvider<RecordedVideoNotifier, XFile?>(RecordedVideoNotifier.new);
+    NotifierProvider<RecordedVideoNotifier, RecordedVideo?>(
+        RecordedVideoNotifier.new);
 
 // 送信先選択に必要なデータ（参加中グループ + 今この時間帯に投稿済みのグループID）。
 class SendTargets {
@@ -90,6 +100,7 @@ class PostController {
   Future<void> send({
     required XFile video,
     required List<String> groupIds,
+    bool needsFlip = false,
   }) async {
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) {
@@ -111,7 +122,11 @@ class PostController {
 
     final post = await supabase
         .from('posts')
-        .insert({'user_id': userId, 'video_url': videoUrl})
+        .insert({
+          'user_id': userId,
+          'video_url': videoUrl,
+          'needs_flip': needsFlip,
+        })
         .select()
         .single();
     final postId = post['id'] as String;

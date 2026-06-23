@@ -1,0 +1,42 @@
+// 撮影動画を統一した向き(横向き)で表示する共通ウィジェット。
+// 縦撮り動画を90度回転し、上下逆に記録された動画(needsFlip)は更に180度補正する。
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
+
+class RecordedVideoView extends StatelessWidget {
+  const RecordedVideoView({
+    super.key,
+    required this.controller,
+    this.needsFlip = false,
+  });
+
+  final VideoPlayerController controller;
+  // ファイル自体が上下逆に記録された動画(Android前面カメラ等)を180度回して補正する。
+  final bool needsFlip;
+
+  @override
+  Widget build(BuildContext context) {
+    // スマホは縦撮りを90度(3)回す。Webカメラは逆方向に倒れるため向きを変える(1)。
+    // 上下逆の動画はさらに180度(2)加えて補正する。
+    final quarterTurns = ((kIsWeb ? 1 : 3) + (needsFlip ? 2 : 0)) % 4;
+
+    return FittedBox(
+      fit: BoxFit.cover,
+      // Webは撮影プレビュー(鏡)と向きを揃えるため左右反転する。
+      child: Transform.scale(
+        scaleX: kIsWeb ? -1 : 1,
+        scaleY: 1,
+        child: RotatedBox(
+          quarterTurns: quarterTurns,
+          child: SizedBox(
+            width: controller.value.size.width,
+            height: controller.value.size.height,
+            child: VideoPlayer(controller),
+          ),
+        ),
+      ),
+    );
+  }
+}

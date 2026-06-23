@@ -45,10 +45,13 @@ create table public.group_members (
 );
 
 -- posts: 投稿（動画本体）。共有先は post_shares で管理する。
+-- needs_flip: 撮影時にファイル自体が上下逆で記録された動画(Android前面カメラ等)に立てる。
+-- 再生時にこのフラグを見て180度回転して向きを補正する。
 create table public.posts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users (id) on delete cascade,
   video_url text not null,
+  needs_flip boolean not null default false,
   created_at timestamptz not null default now()
 );
 

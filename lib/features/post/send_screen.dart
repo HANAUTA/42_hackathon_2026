@@ -2,7 +2,6 @@
 // 1時間制限で送信済みのグループはグレーアウトして選択不可にする。
 
 import 'package:camera/camera.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +10,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/navigation.dart';
 import '../../models/group.dart';
 import 'post_provider.dart';
+import 'recorded_video_view.dart';
 import 'video_preview_factory.dart';
 
 class SendScreen extends ConsumerStatefulWidget {
@@ -31,7 +31,7 @@ class _SendScreenState extends ConsumerState<SendScreen> {
   void initState() {
     super.initState();
     final video = ref.read(recordedVideoProvider);
-    if (video != null) _initPreview(video);
+    if (video != null) _initPreview(video.file);
   }
 
   @override
@@ -70,8 +70,9 @@ class _SendScreenState extends ConsumerState<SendScreen> {
     setState(() => _sending = true);
     try {
       await ref.read(postControllerProvider).send(
-            video: video,
+            video: video.file,
             groupIds: _selectedGroupIds.toList(),
+            needsFlip: video.needsFlip,
           );
       if (mounted) context.go('/home');
     } catch (e) {
@@ -143,6 +144,7 @@ class _SendScreenState extends ConsumerState<SendScreen> {
 
   Widget _buildPreview() {
     final controller = _videoController;
+    final needsFlip = ref.watch(recordedVideoProvider)?.needsFlip ?? false;
     return Container(
       color: Colors.black,
       width: double.infinity,
@@ -152,22 +154,9 @@ class _SendScreenState extends ConsumerState<SendScreen> {
           ? AspectRatio(
               aspectRatio: 16 / 9,
               child: ClipRect(
-                child: FittedBox(
-                  fit: BoxFit.cover,
-                  // Webは撮影プレビュー(鏡)と向きを揃えるため左右反転する。
-                  child: Transform.scale(
-                    scaleX: kIsWeb ? -1 : 1,
-                    scaleY: 1,
-                    // Webカメラはスマホと逆方向に倒れて録画されるため回転方向を変える。
-                    child: RotatedBox(
-                      quarterTurns: kIsWeb ? 1 : 3,
-                      child: SizedBox(
-                        width: controller.value.size.width,
-                        height: controller.value.size.height,
-                        child: VideoPlayer(controller),
-                      ),
-                    ),
-                  ),
+                child: RecordedVideoView(
+                  controller: controller,
+                  needsFlip: needsFlip,
                 ),
               ),
             )

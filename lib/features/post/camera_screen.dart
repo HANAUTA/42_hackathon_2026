@@ -165,7 +165,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     try {
       final file = await controller.stopVideoRecording();
       setState(() => _isRecording = false);
-      ref.read(recordedVideoProvider.notifier).set(file);
+      ref
+          .read(recordedVideoProvider.notifier)
+          .set(RecordedVideo(file: file, needsFlip: _needsFlip));
       if (mounted) context.push('/send');
     } catch (e) {
       setState(() {
@@ -269,6 +271,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         child: Center(child: CameraPreview(controller)),
       ),
     );
+  }
+
+  // Android前面カメラはファイル自体が上下逆に記録されるため、再生側で補正させる。
+  bool get _needsFlip {
+    if (kIsWeb || _cameras.isEmpty) return false;
+    return defaultTargetPlatform == TargetPlatform.android &&
+        _cameras[_cameraIndex].lensDirection == CameraLensDirection.front;
   }
 
   String get _currentTimeLabel {
