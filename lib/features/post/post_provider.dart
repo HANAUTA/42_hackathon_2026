@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/jst.dart';
 import '../../core/supabase_client.dart';
+import '../../core/video_processor.dart';
 import '../../models/group.dart';
 
 // 撮影直後の動画。ファイルと向き補正フラグ(needsFlip)を送信画面へ受け渡す。
@@ -107,16 +108,15 @@ class PostController {
       throw StateError('ログインが必要です');
     }
 
-    final bytes = await video.readAsBytes();
-    final ext = _extension(video);
+    final processed = await processVideo(video);
     final now = jstNow();
     final path =
-        '$userId/${DateTime.now().millisecondsSinceEpoch}.$ext';
+        '$userId/${DateTime.now().millisecondsSinceEpoch}.${processed.extension}';
 
     await supabase.storage.from('videos').uploadBinary(
           path,
-          bytes,
-          fileOptions: FileOptions(contentType: video.mimeType ?? 'video/$ext'),
+          processed.bytes,
+          fileOptions: FileOptions(contentType: processed.mimeType),
         );
     final videoUrl = supabase.storage.from('videos').getPublicUrl(path);
 
@@ -146,18 +146,4 @@ class PostController {
 
     _ref.read(recordedVideoProvider.notifier).clear();
   }
-}
-
-
-// 動画ファイルの拡張子を求める。Webは webm、その他は mp4 を既定とする。
-String _extension(XFile video) {
-  final name = video.name;
-  final dot = name.lastIndexOf('.');
-  if (dot != -1 && dot < name.length - 1) {
-    return name.substring(dot + 1).toLowerCase();
-  }
-  final mime = video.mimeType ?? '';
-  if (mime.contains('webm')) return 'webm';
-  if (mime.contains('mp4')) return 'mp4';
-  return 'mp4';
 }
