@@ -86,7 +86,11 @@ Remove-Item flutter.zip
 ```
 
 ```powershell
-# 2. PATH に追加する（今のターミナルだけ有効）
+# 2. PATH に永続的に追加する（今のターミナルにも即反映）
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+if ($currentPath -notlike "*C:\src\flutter\bin*") {
+  [Environment]::SetEnvironmentVariable("Path", "$currentPath;C:\src\flutter\bin", "User")
+}
 $env:Path += ";C:\src\flutter\bin"
 ```
 
@@ -95,12 +99,7 @@ $env:Path += ";C:\src\flutter\bin"
 flutter doctor
 ```
 
-> ⚠️ **PowerShell を閉じると PATH が消えます。** 永続化するには：
->
-> 1. Windows キーを押して **「環境変数」** と検索 → 「環境変数を編集」を開く
-> 2. 「ユーザー環境変数」の **Path** をダブルクリック
-> 3. **「新規」** → `C:\src\flutter\bin` を追加 → OK
-> 4. PowerShell を**開き直して** `flutter --version` で確認
+> ✅ PATH は永続化済みです。ターミナルを閉じて開き直しても `flutter` が使えます。
 
 ### 🍎 Mac の人
 
