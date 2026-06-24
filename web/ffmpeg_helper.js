@@ -1,5 +1,6 @@
 // ブラウザ内でffmpeg.wasmを使い、撮影動画を720p縦型mp4に変換する。
-// Flutter(Dart)側からwindow.processVideoWeb(bytes)で呼び出す。
+// ステッカーはCanvasで絵文字をPNGに描画し、overlayフィルタで焼き付ける。
+// Flutter(Dart)側からwindow.processVideoWeb(bytes, stickersJson)で呼び出す。
 
 let _ffmpeg = null;
 let _loadPromise = null;
@@ -12,7 +13,6 @@ function _err(...args) {
 }
 
 // ファイルを取得しblob URL化する。404やHTMLフォールバックを掴んでいないか検証する。
-// （toBlobURLはfetchが404でも気づかずHTMLをblob化し、importScriptsで失敗するため自前実装）
 async function _toBlobURL(url, mimeType) {
   const res = await fetch(url);
   if (!res.ok) {
@@ -53,30 +53,28 @@ async function _ensureLoaded() {
       const { FFmpeg } = FFmpegWASM;
       const ffmpeg = new FFmpeg();
 
-      // FFmpeg本体のログ・進捗をコンソールに流す。
       ffmpeg.on('log', ({ type, message }) => _log(`(${type})`, message));
       ffmpeg.on('progress', ({ progress, time }) => {
         _log(`進捗 ${(progress * 100).toFixed(1)}%  time=${time}`);
       });
 
-      // シングルスレッド版コア。SharedArrayBuffer不要でCOOP/COEPヘッダ無しで動く。
-      // ファイルは web/ffmpeg/ に同梱。ルート絶対パスでパス解決事故を防ぐ。
       const base = '/ffmpeg';
       _log('blob化開始', base);
-      const classWorkerURL = await _toBlobURL(`${base}/814.ffmpeg.js`, 'text/javascript');
       const coreURL = await _toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript');
       const wasmURL = await _toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm');
       _log('blob化完了');
 
+      // classWorkerURL はマルチスレッド版でのみ必要。
+      // シングルスレッド版では渡すと "failed to import ffmpeg-core.js" が発生する。
       _log('ffmpeg.load() 実行');
-      await ffmpeg.load({ classWorkerURL, coreURL, wasmURL });
+      await ffmpeg.load({ coreURL, wasmURL });
 
       _ffmpeg = ffmpeg;
       _log(`ロード完了 (${(performance.now() - t0).toFixed(0)}ms)`);
       return ffmpeg;
     } catch (e) {
       _err('ロード失敗:', e);
-      _loadPromise = null; // 次回リトライできるようにする
+      _loadPromise = null;
       throw e;
     }
   })();
@@ -84,45 +82,97 @@ async function _ensureLoaded() {
   return _loadPromise;
 }
 
-// 入力動画(webm等)のバイト列を受け取り、720x1280縦型mp4のバイト列を返す。
-// 変換コマンドはモバイル版(video_processor_io.dart)と同一。
-async function processVideoWeb(inputBytes) {
-  const t0 = performance.now();
-  try {
-    _log(`変換開始: 入力 ${inputBytes.length} bytes (${(inputBytes.length / 1024 / 1024).toFixed(2)} MB)`);
-    const ffmpeg = await _ensureLoaded();
+// 絵文字を size×size のPNG(Uint8Array)にレンダリングする。
+async function _renderEmojiToPng(emoji, size) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.font = `${Math.floor(size * 0.75)}px serif`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+  ctx.fillText(emoji, size / 2, size / 2);
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      blob.arrayBuffer().then((buf) => resolve(new Uint8Array(buf)));
+    }, 'image/png');
+  });
+}
 
-    // 入力は拡張子付きにする（ffmpegがコンテナ形式を判別しやすくなる）。
+// 入力動画のバイト列とステッカーJSONを受け取り、720x1280縦型mp4のバイト列を返す。
+// stickersJson: [{emoji, col, row}] の配列。col/rowはffmpegのoverlay座標(ピクセル)。
+async function processVideoWeb(inputBytes, stickersJson) {
+  const t0 = performance.now();
+  const stickers = JSON.parse(stickersJson || '[]');
+  _log(`変換開始: 入力 ${inputBytes.length} bytes, ステッカー ${stickers.length} 件`);
+
+  try {
+    const ffmpeg = await _ensureLoaded();
     const inputName = 'input.webm';
     const outputName = 'output.mp4';
 
-    _log('writeFile:', inputName);
     await ffmpeg.writeFile(inputName, inputBytes);
 
-    const args = [
-      '-y', '-i', inputName,
-      '-vf',
+    // ステッカーをPNGに変換してffmpegの仮想FSに書き込む
+    const stickerEntries = [];
+    for (let i = 0; i < stickers.length; i++) {
+      const { emoji, col, row } = stickers[i];
+      const png = await _renderEmojiToPng(emoji, 80);
+      const name = `sticker_${i}.png`;
+      await ffmpeg.writeFile(name, png);
+      stickerEntries.push({ name, col, row });
+      _log(`ステッカー${i}: emoji=${emoji} col=${col} row=${row}`);
+    }
+
+    const resize =
       'scale=720:1280:force_original_aspect_ratio=decrease,' +
-        'pad=720:1280:(ow-iw)/2:(oh-ih)/2:black',
+      'pad=720:1280:(ow-iw)/2:(oh-ih)/2:black';
+
+    // コマンド引数を配列で組み立てる（特殊文字を安全に扱うため）
+    const args = ['-y', '-i', inputName];
+    for (const { name } of stickerEntries) {
+      args.push('-i', name);
+    }
+
+    if (stickerEntries.length === 0) {
+      args.push('-vf', resize);
+    } else {
+      // filter_complex: リサイズ後に各ステッカーを順番にoverlay
+      let filter = `[0:v]${resize}[base];`;
+      for (let i = 0; i < stickerEntries.length; i++) {
+        const { col, row } = stickerEntries[i];
+        const src = i === 0 ? '[base]' : `[v${i}]`;
+        const dst = i === stickerEntries.length - 1 ? '[out]' : `[v${i + 1}]`;
+        filter += `${src}[${i + 1}:v]overlay=${col}:${row}${dst}`;
+        if (i < stickerEntries.length - 1) filter += ';';
+      }
+      args.push('-filter_complex', filter, '-map', '[out]', '-map', '0:a?');
+    }
+
+    args.push(
       '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
       '-c:a', 'aac', '-b:a', '128k',
       '-movflags', '+faststart',
       outputName,
-    ];
+    );
+
     _log('exec:', args.join(' '));
     const tExec = performance.now();
     await ffmpeg.exec(args);
     _log(`exec完了 (${(performance.now() - tExec).toFixed(0)}ms)`);
 
-    _log('readFile:', outputName);
     const data = await ffmpeg.readFile(outputName);
     _log(`変換完了: 出力 ${data.length} bytes (${(data.length / 1024 / 1024).toFixed(2)} MB)`);
 
+    // 仮想FS上の一時ファイルを削除
     try { await ffmpeg.deleteFile(inputName); } catch (e) {}
     try { await ffmpeg.deleteFile(outputName); } catch (e) {}
+    for (const { name } of stickerEntries) {
+      try { await ffmpeg.deleteFile(name); } catch (e) {}
+    }
 
     _log(`総処理時間 ${(performance.now() - t0).toFixed(0)}ms`);
-    return data; // Uint8Array
+    return data;
   } catch (e) {
     _err('変換失敗:', e);
     throw e;

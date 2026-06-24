@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/navigation.dart';
+import 'camera_web_api.dart';
 import 'post_provider.dart';
 
 class CameraScreen extends ConsumerStatefulWidget {
@@ -50,16 +51,74 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     super.dispose();
   }
 
+  void _retry() {
+    debugPrint('[camera] 再試行: カメラセットアップを再実行');
+    setState(() {
+      _error = null;
+      _initializing = true;
+    });
+    _setupCameras();
+  }
+
   Future<void> _setupCameras() async {
+    debugPrint('[camera] セットアップ開始 platform=${kIsWeb ? "web" : "native"}');
     try {
-      final all = await availableCameras();
+      final List<CameraDescription> all;
+      if (kIsWeb) {
+        // Web: camera_web プラグインは availableCameras() が返した CameraDescription を
+        // 内部レジストリに保持する。それを呼ばずに CameraController を作ると
+        // cameraMissingMetadata エラーになる。
+        //
+        // 手順:
+        //   1. JS ヘルパーでカメラのみ権限を取得（マイク不要）
+        //   2. カメラ権限が確定した後で availableCameras() を呼ぶ
+        //      → カメラはすでに granted なので video 部分は即時完了
+        //      → マイクはダイアログが出るか即 NotAllowedError になる（ハングしない）
+        debugPrint('[camera] Web: JS ヘルパーでカメラ権限を取得中...');
+        await enumerateCamerasWebImpl(); // 戻り値不要・権限取得が目的
+        debugPrint('[camera] カメラ権限確定 → availableCameras() でplugin状態を初期化中...');
+        debugPrint('[camera] ※ マイク許可ダイアログが表示されたら「許可」してください');
+        all = await availableCameras().timeout(
+          const Duration(seconds: 20),
+          onTimeout: () {
+            debugPrint('[camera] ⚠️ availableCameras() 20秒タイムアウト');
+            debugPrint('[camera] 💡 開発時は以下で起動するとパーミッションを省略できます:');
+            debugPrint('[camera]    flutter run -d chrome '
+                '--web-browser-flag="--use-fake-ui-for-media-stream"');
+            throw _CameraTimeoutException();
+          },
+        );
+        debugPrint('[camera] ✅ availableCameras() 完了: ${all.length}台');
+      } else {
+        // native: 通常通り availableCameras() を使う
+        debugPrint('[camera] availableCameras() 呼び出し中...');
+        all = await availableCameras().timeout(
+          const Duration(seconds: 8),
+          onTimeout: () {
+            debugPrint('[camera] ⚠️ availableCameras() が 8秒でタイムアウト');
+            throw _CameraTimeoutException();
+          },
+        );
+        debugPrint('[camera] availableCameras() 完了');
+        debugPrint('[camera] 検出されたカメラ数: ${all.length}');
+        for (final c in all) {
+          debugPrint('[camera]   - ${c.name} dir=${c.lensDirection}');
+        }
+      }
+
       if (all.isEmpty) {
+        debugPrint('[camera] ⚠️ カメラが1台も見つからない');
         setState(() {
-          _error = '利用可能なカメラが見つかりません';
+          _error = kIsWeb
+              ? 'カメラが見つかりません。\n'
+                  'ブラウザのURLバーにあるカメラアイコンをクリックして\n'
+                  '「許可する」または「毎回確認する」に変更してください。'
+              : '利用可能なカメラが見つかりません';
           _initializing = false;
         });
         return;
       }
+
       // iPhoneは背面が広角/超広角/望遠など複数返るため、
       // 背面・前面それぞれ1台ずつに絞って切替対象を [背面, 前面] に固定する。
       final back = all.where((c) => c.lensDirection == CameraLensDirection.back);
@@ -70,11 +129,40 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         if (front.isNotEmpty) front.first,
       ];
       if (_cameras.isEmpty) _cameras = all;
+      debugPrint('[camera] 使用カメラ: 背面=${back.length}台, 前面=${front.length}台 '
+          '→ 切替対象=${_cameras.length}台');
 
       await _initController(0);
-    } catch (e) {
+    } catch (e, st) {
+      final msg = e.toString();
+      debugPrint('[camera] ❌ セットアップ失敗: $msg');
+      debugPrint('[camera] $st');
+
+      final isTimeout = e is _CameraTimeoutException;
+      final isMacOsTimeout = msg.contains('TIMEOUT');
+      final isPermission = isTimeout ||
+          isMacOsTimeout ||
+          msg.contains('NotAllowedError') ||
+          msg.contains('Permission') ||
+          msg.contains('permission') ||
+          msg.contains('denied');
+      debugPrint('[camera] timeout=$isTimeout macOsTimeout=$isMacOsTimeout '
+          'permission=$isPermission');
       setState(() {
-        _error = 'カメラの起動に失敗しました: $e';
+        _error = isMacOsTimeout && kIsWeb
+            ? 'macOS のカメラアクセスが Chrome に許可されていません。\n\n'
+                '【手順】\n'
+                '① Mac の「システム設定」を開く\n'
+                '② 「プライバシーとセキュリティ」→「カメラ」\n'
+                '③ 「Google Chrome」をオンにする\n'
+                '④ Chrome を再起動して「再試行」を押す'
+            : isPermission && kIsWeb
+                ? 'カメラの使用が許可されていません。\n\n'
+                    '【手順】\n'
+                    '① URLバー左の 🔒 をクリック\n'
+                    '② 「カメラ」を「許可する」に変更\n'
+                    '③ 「再試行」ボタンを押す'
+                : 'カメラの起動に失敗しました: $e';
         _initializing = false;
       });
     }
@@ -83,17 +171,27 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   Future<void> _initController(int index) async {
     // iOSは複数のキャプチャセッションを同時に開けないため、
     // 新しいカメラを起動する前に必ず旧コントローラを破棄する（切替で死ぬのを防ぐ）。
+    debugPrint('[camera] コントローラ初期化開始 index=$index');
     await _controller?.dispose();
     _controller = null;
 
+    final cam = _cameras[index];
+    debugPrint('[camera] 対象カメラ: ${cam.name} dir=${cam.lensDirection}');
+    // Web はマイクパーミッションが取れない環境でも起動できるよう audio を無効にする。
+    // マイクブロックで getUserMedia が失敗してカメラごと起動しなくなるのを防ぐ。
     final controller = CameraController(
-      _cameras[index],
+      cam,
       ResolutionPreset.medium,
-      enableAudio: true,
+      enableAudio: !kIsWeb,
     );
+    debugPrint('[camera] CameraController 作成 enableAudio=${!kIsWeb}');
     try {
       await controller.initialize();
+      debugPrint('[camera] ✅ コントローラ初期化成功 '
+          'previewSize=${controller.value.previewSize} '
+          'aspectRatio=${controller.value.aspectRatio.toStringAsFixed(2)}');
       if (!mounted) {
+        debugPrint('[camera] unmounted のため破棄');
         await controller.dispose();
         return;
       }
@@ -103,8 +201,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         _initializing = false;
       });
     } catch (e, st) {
-      debugPrint('[camera] 初期化失敗 index=$index '
-          'dir=${_cameras[index].lensDirection}: $e');
+      debugPrint('[camera] ❌ コントローラ初期化失敗 index=$index '
+          'dir=${cam.lensDirection}: $e');
       debugPrint('[camera] $st');
       if (!mounted) return;
       setState(() {
@@ -116,11 +214,14 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
 
   Future<void> _switchCamera() async {
     if (_cameras.length < 2 || _isRecording) return;
+    final next = (_cameraIndex + 1) % _cameras.length;
+    debugPrint('[camera] カメラ切替: $next');
     setState(() => _initializing = true);
-    await _initController((_cameraIndex + 1) % _cameras.length);
+    await _initController(next);
   }
 
   void _onShutterPressed() {
+    debugPrint('[camera] シャッター押下 isRecording=$_isRecording');
     if (_isRecording) {
       _stopRecording();
       return;
@@ -133,6 +234,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   }
 
   void _startCountdown() {
+    debugPrint('[camera] カウントダウン開始: $_timerSeconds 秒');
     setState(() => _countdown = _timerSeconds);
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_countdown <= 1) {
@@ -147,13 +249,17 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
 
   Future<void> _startRecording() async {
     final controller = _controller;
+    debugPrint('[camera] 録画開始試行 controller=${controller != null}');
     if (controller == null || _isRecording) return;
     try {
       await controller.startVideoRecording();
+      debugPrint('[camera] ✅ 録画開始成功');
       setState(() => _isRecording = true);
       // 2秒経過で自動停止する。
       _recordTimer = Timer(_recordDuration, _stopRecording);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[camera] ❌ 録画開始失敗: $e');
+      debugPrint('[camera] $st');
       setState(() => _error = '録画開始に失敗しました: $e');
     }
   }
@@ -161,15 +267,22 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   Future<void> _stopRecording() async {
     _recordTimer?.cancel();
     final controller = _controller;
+    debugPrint('[camera] 録画停止試行 controller=${controller != null} '
+        'isRecording=$_isRecording');
     if (controller == null || !_isRecording) return;
     try {
       final file = await controller.stopVideoRecording();
+      debugPrint('[camera] ✅ 録画停止成功 path=${file.path} '
+          'mimeType=${file.mimeType}');
       setState(() => _isRecording = false);
       ref
           .read(recordedVideoProvider.notifier)
           .set(RecordedVideo(file: file, needsFlip: _needsFlip));
+      debugPrint('[camera] 送信画面へ遷移 needsFlip=$_needsFlip');
       if (mounted) context.push('/send');
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[camera] ❌ 録画停止失敗: $e');
+      debugPrint('[camera] $st');
       setState(() {
         _isRecording = false;
         _error = '録画停止に失敗しました: $e';
@@ -183,7 +296,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
       backgroundColor: Colors.black,
       body: SafeArea(
         child: _error != null
-            ? _ErrorView(message: _error!)
+            ? _ErrorView(message: _error!, onRetry: _retry)
             : _initializing || _controller == null
                 ? const Center(child: CircularProgressIndicator())
                 : _buildCameraView(),
@@ -388,21 +501,38 @@ class _TimerButton extends StatelessWidget {
 }
 
 class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message});
+  const _ErrorView({required this.message, required this.onRetry});
 
   final String message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white),
-        ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 24),
+          const Icon(Icons.videocam_off, size: 48, color: Colors.white54),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: const Text('再試行'),
+          ),
+          const SizedBox(height: 24),
+        ],
       ),
     );
   }
 }
+
+// availableCameras() がタイムアウトしたことを示す内部例外。
+class _CameraTimeoutException implements Exception {}

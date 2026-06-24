@@ -162,17 +162,19 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(
         children: [
-          const Text(
-            'SETLOG',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              fontStyle: FontStyle.italic,
-              color: Color(0xFF2ECDB0),
-              letterSpacing: 1,
+          Expanded(
+            child: Text(
+              'SETLOG',
+              overflow: TextOverflow.clip,
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                fontStyle: FontStyle.italic,
+                color: Color(0xFF2ECDB0),
+                letterSpacing: 1,
+              ),
             ),
           ),
-          const Spacer(),
           _CircleIconButton(icon: Icons.add, onTap: onAddGroup),
           const SizedBox(width: 8),
           _CircleIconButton(icon: Icons.more_horiz, onTap: onMore),

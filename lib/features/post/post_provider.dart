@@ -3,6 +3,7 @@
 // Storageアップロード〜posts/post_shares書き込みを担当する。
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -10,6 +11,7 @@ import '../../core/jst.dart';
 import '../../core/supabase_client.dart';
 import '../../core/video_processor.dart';
 import '../../models/group.dart';
+import '../../models/sticker_overlay.dart';
 
 // 撮影直後の動画。ファイルと向き補正フラグ(needsFlip)を送信画面へ受け渡す。
 class RecordedVideo {
@@ -102,16 +104,34 @@ class PostController {
     required XFile video,
     required List<String> groupIds,
     bool needsFlip = false,
+    List<StickerOverlay> stickers = const [],
   }) async {
+    debugPrint('[post] send() 開始 '
+        'groupIds=${groupIds.length}件 '
+        'stickers=${stickers.length}件 '
+        'needsFlip=$needsFlip');
+
     final userId = supabase.auth.currentUser?.id;
+    debugPrint('[post] userId=$userId');
     if (userId == null) {
+      debugPrint('[post] ❌ 未ログイン');
       throw StateError('ログインが必要です');
     }
 
-    final processed = await processVideo(video);
+    debugPrint('[post] 動画処理開始 '
+        'path=${video.path} mimeType=${video.mimeType}');
+    final processed = await processVideo(
+      video,
+      stickers: stickers,
+      needsFlip: needsFlip,
+    );
+    debugPrint('[post] 動画処理完了 '
+        '${processed.bytes.length} bytes (${(processed.bytes.length / 1024 / 1024).toStringAsFixed(2)} MB)');
+
     final now = jstNow();
     final path =
         '$userId/${DateTime.now().millisecondsSinceEpoch}.${processed.extension}';
+    debugPrint('[post] Storage アップロード開始 path=$path');
 
     await supabase.storage.from('videos').uploadBinary(
           path,
@@ -119,7 +139,9 @@ class PostController {
           fileOptions: FileOptions(contentType: processed.mimeType),
         );
     final videoUrl = supabase.storage.from('videos').getPublicUrl(path);
+    debugPrint('[post] ✅ アップロード完了 url=$videoUrl');
 
+    debugPrint('[post] posts テーブルに insert');
     final post = await supabase
         .from('posts')
         .insert({
@@ -130,8 +152,10 @@ class PostController {
         .select()
         .single();
     final postId = post['id'] as String;
+    debugPrint('[post] ✅ posts insert 完了 postId=$postId');
 
     if (groupIds.isNotEmpty) {
+      debugPrint('[post] post_shares insert: groupIds=$groupIds');
       await supabase.from('post_shares').insert([
         for (final groupId in groupIds)
           {
@@ -142,8 +166,10 @@ class PostController {
             'shared_hour': now.hour,
           },
       ]);
+      debugPrint('[post] ✅ post_shares insert 完了');
     }
 
     _ref.read(recordedVideoProvider.notifier).clear();
+    debugPrint('[post] send() 完了');
   }
 }
