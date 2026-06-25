@@ -6,6 +6,7 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_platform.dart';
 import '../../core/supabase_client.dart';
 import '../../models/app_user.dart';
 import '../../models/group.dart';
@@ -172,14 +173,16 @@ class GroupService {
   }
 
   // 指定グループ・日付・時間帯の投稿一覧を取得する。
+  // Web/スマホで動画を棲み分けるため、現在のプラットフォームの投稿のみ取得する。
   Future<List<GroupPost>> fetchPosts(GroupPostsArgs args) async {
     final rows = await supabase
         .from('post_shares')
         .select(
-            'created_at, posts(id, user_id, video_url, needs_flip, created_at, users(name, icon_url))')
+            'created_at, posts!inner(id, user_id, video_url, needs_flip, created_at, users(name, icon_url))')
         .eq('group_id', args.groupId)
         .eq('shared_date', args.sharedDate)
         .eq('shared_hour', args.hour)
+        .eq('posts.platform', currentPlatform)
         .order('created_at');
 
     return rows.map((row) {

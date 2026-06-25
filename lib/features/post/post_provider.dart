@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/app_platform.dart';
 import '../../core/jst.dart';
 import '../../core/supabase_client.dart';
 import '../../models/group.dart';
@@ -126,6 +127,7 @@ class PostController {
           'user_id': userId,
           'video_url': videoUrl,
           'needs_flip': needsFlip,
+          'platform': currentPlatform,
         })
         .select()
         .single();
