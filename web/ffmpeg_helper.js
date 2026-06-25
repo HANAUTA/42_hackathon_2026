@@ -124,9 +124,11 @@ async function processVideoWeb(inputBytes, stickersJson) {
       _log(`ステッカー${i}: emoji=${emoji} col=${col} row=${row}`);
     }
 
+    // 黒帯を出さず720x1280の縦枠いっぱいに収める（cover）。
+    // 枠に合わない分は中央基準で切り落とす。カメラプレビューのBoxFit.coverと同じ見え方。
     const resize =
-      'scale=720:1280:force_original_aspect_ratio=decrease,' +
-      'pad=720:1280:(ow-iw)/2:(oh-ih)/2:black';
+      'scale=720:1280:force_original_aspect_ratio=increase,' +
+      'crop=720:1280';
 
     // コマンド引数を配列で組み立てる（特殊文字を安全に扱うため）
     const args = ['-y', '-i', inputName];
