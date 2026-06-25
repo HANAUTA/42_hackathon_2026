@@ -1,116 +1,142 @@
 # Setlog（セットログ）
 
 グループで短い動画を共有するスマホアプリです。
-このアプリは **Flutter**（アプリを作る道具）と **Supabase**（データを保存する場所）で動いています。
-
-このページの通りに上から順番に進めれば、自分のパソコンでアプリを動かせます。
-**焦らず1ステップずつ**進めてください。
+**Flutter** と **Supabase** で動いています。
 
 ---
 
-## 全体の流れ（先に地図を見ておこう）
+## 全体の流れ
 
-準備は大きく **2つのフェーズ** に分かれます。
+```
+【事前に自分で準備】 VS Code・Chrome・GitHub アカウント
+        ↓
+【当日みんなで】    Flutter → clone → .env → 起動！
+        ↓
+【好きなタイミングで】Claude Code 設定 ／ スマホ配布設定
+```
 
-### 🎯 まずのゴール：全員がアプリを起動できること
+### 🎯 最初のゴール：全員がアプリを起動できること
 
-これが **最初の最優先目標** です。まずはここまでを全員でそろえます。
+1. **Flutter を入れる**（当日みんなで）
+2. **チームのリポジトリを作ってクローンする**（当日みんなで）
+3. **アプリを起動する**（配られた値をコピペするだけ） ← ✅ ここまで来たらゴール！
 
-0. **VS Code を入れる**（エディタの準備）
-1. **Flutter を入れる**（アプリを動かす道具の準備）
-2. **チーム用の GitHub リポジトリを作る**（テンプレートからコピー → チームで共有）
-3. **Supabase を作ってアプリを起動する**（無料・各自で作成） ← ✅ ここまで来たら全員ゴール！
+### 🛠 そのあと（グループごとに好きなタイミングで）
 
-### 🛠 その後の準備：開発の道具をそろえる
+4. **Claude Code を設定する**（配られた API キーを使う）
+5. **開発の流れを知る**（ブランチ → 開発 → マージ → スマホに届く）
 
-アプリが起動できた人から、開発を進めるための道具を準備します。
-
-4. **Claude Code を設定する**（配られたAPIキーを使う）
-5. **スマホで動くか試してみる**（push → 自動ビルド → 貸し出し端末で確認）
-
-> 💡 開発は **Chrome（ブラウザ）** で行います。
-> WindowsでもMacでも同じやり方でできるので、まずはこれで進めましょう。
-> スマホでの確認は、コードを push すると**自動でAndroid端末に届く**仕組みになっています。
->
-> ⏱ **ステップ0〜3（アプリ起動）を最優先**で進めてください。
-> ステップ4・5は、アプリが起動できてから取りかかればOKです。
+> 💡 開発は **Chrome（ブラウザ）** で行います。Windows でも Mac でも同じです。
+> スマホでの確認は `main` に push すると**自動で Android 端末に届く**仕組みです（設定方法は後述）。
 
 ---
 
-## ステップ０：エディタを用意する（こだわりがなければ VS Code 推奨）
+## 事前に準備しておくもの
 
-このあと、ファイルの中身を見たり編集したりします（例：ステップ4の `.env`）。
-そのために **エディタ**（コードを書くためのアプリ）が必要です。
+当日スムーズに始めるために、**以下を事前に用意**しておいてください。
+詳しいインストール手順は 👉 **[事前準備ガイド](docs/事前準備ガイド.md)** を参照。
 
-> **こだわりがなければ VS Code（ブイエス・コード）がおすすめです。**
-> 無料で、WindowsでもMacでも使えて、このアプリの開発でもよく使われています。
-
-### まだ入れていない人へ
+### ✅ VS Code（エディタ）
 
 1. [VS Code 公式ダウンロードページ](https://code.visualstudio.com/) を開く
-2. 自分のパソコン（Windows / Mac）に合わせてダウンロードして、インストールする
-3. インストールが終わったら VS Code を開く
+2. 自分のパソコン（Windows / Mac）に合わせてダウンロード → インストール
 
-> 💡 **おすすめ設定（任意）**
-> VS Code を開いて左側の四角いアイコン（拡張機能）から **「Flutter」** を検索してインストールしておくと、
-> このアプリの開発がぐっと楽になります（コードの補完やエラー表示が効くようになります）。
+> 💡 VS Code を開いて左の四角いアイコン（拡張機能）から **「Flutter」** を検索してインストールしておくと開発が楽になります。
 
-すでに使い慣れたエディタがある人は、それを使ってもOKです。
+### ✅ Chrome（ブラウザ）
+
+開発中のアプリを Chrome で表示して確認します。
+入っていない人は [google.com/chrome](https://www.google.com/chrome/) からインストール。
+
+### ✅ Git（バージョン管理ツール）
+
+コードのダウンロードや共有に必要です。ターミナルで `git --version` を打ってバージョンが出ればOK。
+
+- 🪟 Windows：[git-scm.com](https://git-scm.com/download/win) からインストール
+- 🍎 Mac：ターミナルで `git --version` を打つと自動でインストールを案内されます
+
+### ✅ GitHub アカウント
+
+コードの保存・共有に使います。
+アカウントが無い人は [github.com](https://github.com) で作っておいてください。
 
 ---
 
 ## ステップ1：Flutter を入れる
 
-> すでに入っている人は飛ばしてOK。
-> 確認するにはターミナル（Macは「ターミナル」、Windowsは「PowerShell」）で
-> 次を打ってバージョンが出れば入っています。
+> すでに入っている人は飛ばしてOK。確認方法 ↓
 >
 > ```bash
 > flutter --version
 > ```
+>
+> バージョンが出れば入っています。
 
 ### 🪟 Windows の人
 
-1. [Flutter公式インストールページ（Windows）](https://docs.flutter.dev/get-started/install/windows) を開く
-2. ページの指示に従って Flutter をダウンロードし、`C:\src\flutter` などに展開する
-3. 展開した中の `flutter\bin` フォルダを、Windowsの「環境変数 PATH」に追加する
-   （やり方が分からなければ「Windows PATH 追加 方法」で検索）
-4. **PowerShellを開き直して** `flutter doctor` を打つ
+PowerShell を開いて、**1行ずつコピペして実行**してください。
+
+```powershell
+# 1. Flutter SDK をダウンロード・展開する（C:\src に配置）
+mkdir C:\src -ErrorAction SilentlyContinue
+cd C:\src
+Invoke-WebRequest -Uri "https://storage.googleapis.com/flutter_infra_release/releases/stable/windows/flutter_windows_3.32.4-stable.zip" -OutFile flutter.zip
+Expand-Archive -Path flutter.zip -DestinationPath . -Force
+Remove-Item flutter.zip
+```
+
+```powershell
+# 2. PATH に永続的に追加する（今のターミナルにも即反映）
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+if ($currentPath -notlike "*C:\src\flutter\bin*") {
+  [Environment]::SetEnvironmentVariable("Path", "$currentPath;C:\src\flutter\bin", "User")
+}
+$env:Path += ";C:\src\flutter\bin"
+```
+
+```powershell
+# 3. 確認
+flutter doctor
+```
+
+> ✅ PATH は永続化済みです。ターミナルを閉じて開き直しても `flutter` が使えます。
 
 ### 🍎 Mac の人
 
-1. ターミナルを開いて、次をコピペして実行する（Homebrewが必要です）
+ターミナルを開いて、**1行ずつコピペして実行**してください。
 
-   ```bash
-   brew install --cask flutter
-   ```
+```bash
+# 1. Homebrew で Flutter をインストール
+brew install --cask flutter
+```
 
-   ※ Homebrew が無い人は [Flutter公式インストールページ（Mac）](https://docs.flutter.dev/get-started/install/macos) を見てください
-2. `flutter doctor` を打つ
+```bash
+# 2. 確認
+flutter doctor
+```
 
-### 入れ終わったら確認
+> Homebrew が無い人は、先にこれを実行：
+>
+> ```bash
+> /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+> ```
 
-ターミナルで次を打ちます。
+### 入れ終わったら
 
 ```bash
 flutter doctor
 ```
 
-✅ いくつか緑のチェックが出ればOKです。
-`[!]` マークが出ても、いまは気にしなくて大丈夫（Chromeが使えれば進めます）。
+✅ いくつか緑のチェックが出ればOK。
+`[!]` マークが出ても、Chrome が使えていれば問題ありません。
 
 ---
 
-## ステップ2：チーム用の GitHub リポジトリを作る
+## ステップ2：チームのリポジトリを作ってクローンする
 
-アプリのテンプレートコードをコピーして、**チーム専用のリポジトリ**を作ります。
-このリポジトリをチーム全員で共有して開発を進めます。
+テンプレートのコードをコピーして、**チーム専用のリポジトリ**を作ります。
 
-### 2-1. 事前確認
-
-#### git が入っているか確認する
-
-ターミナルで次を打ちます。
+### 2-1. git が入っているか確認する
 
 ```bash
 git --version
@@ -121,14 +147,9 @@ git --version
 - 🍎 Mac：`brew install git`
 - 🪟 Windows：[git公式ページ](https://git-scm.com/download/win) からインストール
 
-#### GitHub アカウントを用意する
+### 2-2. 代表者がリポジトリを作る（チームで1人だけ）
 
-1. アカウントが無い人は [github.com](https://github.com) で作る
-2. **チーム全員が GitHub アカウントを持っている**ことを確認する（後で招待するため）
-
-### 2-2. チームの代表者がリポジトリを作る（1人だけ）
-
-> **この作業はチームの代表者1人**が行います。他のメンバーは 2-3 まで待ってください。
+> **この作業は代表者1人だけ**です。他のメンバーは 2-3 まで待ってください。
 
 #### ① GitHub に空のリポジトリを作る
 
@@ -139,392 +160,168 @@ git --version
 | 項目 | 入れる値 |
 |---|---|
 | Repository name | チーム名など（例：`team-alpha-setlog`） |
-| Public / Private | **Public**（チーム全員がアクセスできるように） |
-| Initialize this repository | **チェックしない**（空のまま作る） |
+| Public / Private | **Public** |
+| Initialize this repository | **チェックしない**（空のまま） |
 
 4. **「Create repository」** をクリック
-5. 作成されたリポジトリの URL をメモしておく（例：`https://github.com/あなた/team-alpha-setlog.git`）
+5. 表示されるリポジトリの URL をメモしておく
 
 #### ② テンプレートをコピーして push する
 
-ターミナルで**1行ずつ順番に**打ちます。
-最後の行の URL は、①で作った**自分のリポジトリの URL** に置きかえてください。
+ターミナルで **1行ずつ順番に** コピペして実行します。
+**最後の行の URL だけ**、①で作った自分のリポジトリの URL に置きかえてください。
 
 ```bash
 git clone -b yunchol https://github.com/HANAUTA/42_hackathon_2026.git
+```
+
+```bash
 cd 42_hackathon_2026
+```
+
+```bash
 rm -rf .git
+```
+
+```bash
 git init
+```
+
+```bash
 git add .
+```
+
+```bash
 git commit -m "Initial commit"
+```
+
+```bash
 git branch -M main
+```
+
+```bash
 git remote add origin https://github.com/あなたのユーザー名/リポジトリ名.git
+```
+
+```bash
 git push -u origin main
 ```
 
-> 💡 何をしているか：
-> - `git clone -b yunchol ...` … テンプレートのコードを持ってくる
-> - `rm -rf .git` … 元のGit履歴を削除する（テンプレートの履歴は不要）
-> - `git init` 〜 `git push` … 新しいリポジトリとして初期化して GitHub に上げる
-
-> 🔑 push 時に GitHub のログインを求められたら、アカウントのユーザー名と
-> **パスワードの代わりにアクセストークン（PAT）** を入力します。
-> 求められない場合は気にしなくてOKです。
-
-#### ③ チームメンバーを招待する
-
-1. GitHub で作ったリポジトリを開く
-2. **「Settings」** → **「Collaborators」** をクリック
-3. **「Add people」** をクリック
-4. チームメンバーの **GitHub ユーザー名** を入力して招待する
-5. 全メンバーを招待したら、**リポジトリの URL をチーム全員に共有**する
-
-### 2-3. メンバー全員がクローンする
-
-> 代表者から **リポジトリの URL** と **招待** を受け取ってから進めてください。
-
-1. GitHub の通知 or メールから **招待を承認**する（「Accept invitation」を押す）
-2. ターミナルで次を打つ（URL は代表者から共有されたもの）
+```bash
+cd リポジトリ名
+```
 
 ```bash
-git clone https://github.com/代表者のユーザー名/リポジトリ名.git
-cd リポジトリ名
 flutter pub get
 ```
 
-> 💡 **代表者も** `rm -rf .git` した元のフォルダを消して、改めて `git clone` し直すと
-> 全員が同じ状態からスタートできて安全です。
+
+> 🔑 push 時にログインを求められたら、GitHub のユーザー名と
+> **パスワードの代わりにアクセストークン（PAT）** を入力します。
+
 
 ---
 
-## ステップ3：Supabase（データベース）を作る
+## ステップ3：アプリを起動する
 
-アプリのデータ（ユーザー・グループ・動画など）は **Supabase** に保存されます。
-**各自で自分用の Supabase プロジェクトを作って**、そこに接続します（無料です）。
-
-### 3-1. Supabase のアカウントを作る
-
-1. [supabase.com](https://supabase.com) を開く
-2. **「Start your project」** をクリック
-3. GitHub アカウントでログインする（一番かんたん）
-
-### 3-2. プロジェクトを作る
-
-1. ログインしたら **「New project」** をクリック
-2. 以下を入力する
-
-| 項目 | 入れる値 |
-|---|---|
-| Name | 何でもOK（例：`setlog`） |
-| Database Password | 好きなパスワード（あとで使わないが必須） |
-| Region | **Northeast Asia (Tokyo)** を選ぶ |
-
-3. **「Create new project」** をクリック
-4. 1〜2分待つとプロジェクトが立ち上がる
-
-### 3-3. テーブルと保存場所を作る（SQL を1回実行するだけ）
-
-プロジェクトができたら、アプリが使う**テーブル（データの入れ物）**と**ストレージ（動画・アイコンの保存場所）**を作ります。
-といっても、**用意してある SQL ファイルを貼って実行するだけ**です。中身を理解する必要はありません。
-
-#### やること
-
-1. **VS Code で `supabase/schema.sql` を開く**
-   - プロジェクトフォルダ → `supabase` フォルダ → `schema.sql` をダブルクリック
-
-2. **中身を全部コピーする**
-   - ファイルを開いたら `Ctrl + A`（Mac は `Cmd + A`）で全選択 → `Ctrl + C`（Mac は `Cmd + C`）でコピー
-
-3. **Supabase の SQL Editor を開く**
-   - ブラウザで Supabase ダッシュボードに戻る
-   - 左メニューから **「SQL Editor」** をクリック（`<>` みたいなアイコン）
-
-4. **貼り付けて実行する**
-   - 真ん中の広いエディタ欄をクリック
-   - `Ctrl + V`（Mac は `Cmd + V`）で貼り付ける
-   - 右下（または上部）の緑の **「Run」** ボタンをクリック
-
-5. **結果を確認する**
-   - 下のほうに **「Success. No rows returned」** と出ればOK
-   - 赤いエラーが出たら、全部コピーできているか確認してもう一度やってみてください
-
-> 💡 この SQL で、テーブル5つ（users / groups / group_members / posts / post_shares）と、
-> 動画・アイコン用のストレージが**まとめて全部作られます**。1回実行すれば完了です。
-
-> 💡 **間違えてもう一度実行しても大丈夫です。** 最初に既存のテーブルを消してから作り直す設計になっています（ただしデータは消えます）。
-
-### 3-4. メール確認をオフにする
-
-初期設定ではユーザー登録時に確認メールが飛びますが、開発中は邪魔なのでオフにします。
-
-1. 左メニュー → **Authentication**（人のアイコン）をクリック
-2. 上のタブから **「Providers」** をクリック
-3. **「Email」** の行をクリックして展開する
-4. **「Confirm email」** のトグルを **オフ** にする
-5. **「Save」** をクリック
-
-### 3-5. URL と Key を確認する（ここが大事！）
-
-`.env` に貼る2つの値を確認します。**場所が分かりづらい**ので、この通りに進めてください。
-
-1. 左メニュー → **Project Settings**（歯車アイコン、一番下のほう）
-2. **「API」** をクリック
-
-すると以下の2つが表示されます。
-
-```
-┌───────────────────────────────────────────────┐
-│  Project URL                                  │
-│  https://xxxxxxxx.supabase.co    ← これが URL │
-│                                               │
-│  Project API keys                             │
-│  anon  public                                 │
-│  eyJhbGciOi...長い文字列...      ← これが Key │
-└───────────────────────────────────────────────┘
-```
-
-> ⚠️ **「Project URL」の下にある `https://xxxxxxxx.supabase.co`** をコピーしてください。
-> ブラウザのアドレスバーの URL（`https://supabase.com/dashboard/...`）ではありません！
-
-> ⚠️ Key は **`anon` `public`** と書いてある方です。`service_role` `secret` の方ではありません。
-
-### 3-6. 設定ファイルを作って値を貼る
-
-ターミナルで次を打つと、設定ファイルの雛形がコピーされます。
+### 3-1. 設定ファイルを作る
 
 ```bash
 cp .env.example .env
 ```
 
-できた `.env` ファイルをエディタ（VS Code など）で開き、3-5 で確認した値を貼ります。
+### 3-2. 配られた接続情報を貼る
+
+運営から **Supabase の URL と Key** が配られます。
+`.env` ファイルを VS Code で開いて、配られた値を貼り付けてください。
 
 ```
 SUPABASE_URL=https://xxxxxxxx.supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOi...（長い文字列）
 ```
 
-> 🔑 `.env` には大事な情報が入るので、GitHub には上げません（設定済みなので気にしなくてOK）。
+> ⚠️ **ブラウザのアドレスバーの URL ではありません！** 配られたものをそのまま貼ってください。
+>
+> 🔑 `.env` には大事な情報が入るので、GitHub には上がりません（設定済み）。
 
-### 3-7. 起動！
+### 3-3. 起動！
 
 ```bash
-flutter run -d web-server --web-port 8080
+flutter run -d chrome
 ```
 
-起動したら、**普段使いの Chrome** で `http://localhost:8080` を開いてください。
+Chrome が立ち上がってアプリが表示されたら成功です🎉
 
-> ⚠️ **`flutter run -d chrome` は使わないでください**
-> Flutter が一時プロファイルで Chrome を起動するため、カメラ・マイクの
-> パーミッションが毎回リセットされてカメラが起動しなくなります。
-> `web-server` モードで起動して、普段使いの Chrome で開くのが正しい方法です。
-
-アプリが表示されたら成功です🎉
-
-**ここまでで「全員がアプリを起動できる」という最初のゴールは達成です！** 🏁
-このあとは、開発を進めるための道具をそろえていきます。
+**ここまでで「全員がアプリを起動できる」ゴール達成です！** 🏁
 
 ---
 
-## ステップ4：Claude Code を設定する（アプリが起動できたら）
+## ステップ4：Claude Code を設定する（任意）
 
-> ⚠️ これは **ステップ3でアプリが起動できた人から** 進めてください。
-> まだ起動できていない人は、先にステップ0〜3を優先しましょう。
+> グループごとに好きなタイミングで進めてください。
 
-**Claude Code** は、AIがコードを書くのを手伝ってくれる開発の道具です。
-ハッカソン用に **APIキー** が配られるので、それを設定して使えるようにします。
 
 ### 4-1. Claude Code を入れる
-
-ターミナルで次を打ちます（Node.js が必要です）。
 
 ```bash
 npm install -g @anthropic-ai/claude-code
 ```
 
 > Node.js が入っていない人は [nodejs.org](https://nodejs.org) からインストール
-> （または 🍎 Mac は `brew install node`）。
+> （🍎 Mac は `brew install node` でもOK）。
 
-### 4-2. 配られた APIキー を設定する
+### 4-2. API キーを設定する
 
-配られた APIキー を環境変数に設定します。`（配られたキーを貼る）` の部分を置きかえてください。
-
-🍎 **Mac の人**（ターミナル）
+🍎 **Mac**
 
 ```bash
 export ANTHROPIC_API_KEY=（配られたキーを貼る）
 ```
 
-🪟 **Windows の人**（PowerShell）
+🪟 **Windows**（PowerShell）
 
 ```powershell
 $env:ANTHROPIC_API_KEY="（配られたキーを貼る）"
 ```
 
-> 💡 この設定は **ターミナルを閉じると消えます**。
-> 毎回打つのが面倒な人は、シェルの設定ファイル（Mac は `~/.zshrc` など）に
-> 上の `export ...` の行を書いておくと、次回から自動で読み込まれます。
+> 💡 ターミナルを閉じると消えます。永続化したい人は Mac なら `~/.zshrc` に `export ...` を追加。
 
-### 4-3. 起動して確認する
-
-アプリのフォルダの中で次を打ちます。
+### 4-3. 確認
 
 ```bash
-cd 42_hackathon_2026
 claude
 ```
 
-Claude Code が立ち上がって会話できれば成功です🎉
-`> こんにちは` のように打って返事が返ってくればOKです。
+会話できれば成功です🎉
 
 ---
 
-## ステップ5：スマホで動くか試してみよう（グループで1回）
-
-このアプリは、コードを GitHub の `main` に push すると**自動でスマホ用アプリ（APK）がビルドされて、Android 端末に届く**仕組みになっています。
-ここではその仕組みを**実際に動かして体験**します。
-
-> 📱 **Android 端末は運営が貸し出します。**
-> 端末にはすでに **Firebase App Tester** がインストール済み・メールアドレスも登録済みです。
-> 参加者側で端末の準備をする必要はありません。
-
-### このステップでやること（全体像）
+## ステップ5：開発の流れ
 
 ```
-5-1. GitHub Actions の環境変数を設定する（グループで1回）
-         ↓
-5-2. テスト push する（誰か1人）
-         ↓
-     ⏳ 5〜8分待つ（自動でビルドが走っている）
-         ↓
-5-3. 貸し出し端末でアプリを確認する
+① ブランチを作る → ② Chrome で開発 → ③ push → ④ main にマージ → ⑤ スマホに届く
 ```
 
-### 5-1. GitHub Actions の環境変数を設定する
+> **大事なルール：`main` に直接コミットしない。**
+> 自分のブランチで作業 → main にマージ、の流れで進めます。
 
-自動ビルドを動かすには、GitHub リポジトリに **4つの Secret（秘密の設定値）** を登録する必要があります。
-**グループで1回だけ**やればOKです。
-
-#### 設定場所の開き方
-
-1. GitHub で自分たちのリポジトリを開く
-2. 上のタブから **「Settings」** をクリック
-3. 左メニューの **「Secrets and variables」** → **「Actions」** をクリック
-4. **「New repository secret」** ボタンをクリック
-
-#### 登録する4つの Secret
-
-1つずつ「Name」と「Secret」を入力して **「Add secret」** を押す、を4回繰り返します。
-
-| Name（この通りに入力） | Secret（貼り付ける値） |
-|---|---|
-| `SUPABASE_URL` | ステップ3-5 で確認した **Project URL**（`https://xxxxxxxx.supabase.co`） |
-| `SUPABASE_ANON_KEY` | ステップ3-5 で確認した **anon key**（`eyJhbGciOi...` の長い文字列） |
-| `FIREBASE_APP_ID` | 運営から配られる Firebase の **アプリID** |
-| `FIREBASE_SERVICE_ACCOUNT` | 運営から配られる Firebase の **サービスアカウント JSON** |
-
-> ⚠️ **Name は大文字・アンダースコアで、上の表の通りに正確に入力**してください。1文字でも違うとビルドが失敗します。
->
-> ⚠️ Secret には**値だけ**を貼ります。`SUPABASE_URL=` のような `=` は要りません。
->
-> ⚠️ `FIREBASE_SERVICE_ACCOUNT` は JSON ファイルの**中身をまるごとコピー**して貼ります（`{` から `}` まで全部）。
-
-4つ登録し終わったら、Actions の Secrets 一覧に4つ並んでいるか確認してください。
-
-### 5-2. テスト push してビルドを走らせる
-
-環境変数を設定できたら、**実際に push してビルドが動くか試します**。
-グループの誰か1人がやればOKです。
+### ① ブランチを作る
 
 ```bash
-# main ブランチにいることを確認
-git checkout main
-git pull
-
-# 何か小さな変更を加える（READMEに1行足すだけでOK）
-echo "" >> README.md
-
-# コミットして push
-git add README.md
-git commit -m "ビルドテスト＜チーム名＞"
-git push
+git checkout -b 自分の名前
 ```
 
-push できたら、**GitHub のリポジトリページ**を開いて、上のタブから **「Actions」** をクリックしてください。
+例：`git checkout -b taro`
 
-```
-┌─────────────────────────────────────────┐
-│  ✅ ビルドテスト                          │
-│     Build & Distribute APK              │
-│     🟡 In progress...                   │  ← 黄色い丸 = ビルド中
-└─────────────────────────────────────────┘
-```
-
-**黄色い丸が回っていればビルドが始まっています！** ここから **約5〜8分** かかります。
-
-> ⏳ **待っている間に**、ステップ6の「開発の流れ」を読んでおくと時間を有効に使えます。
-
-> ❌ もしビルドが赤いバツ（失敗）になったら、クリックしてエラーログを確認してください。
-> 一番多い原因は **Secret の Name の打ち間違い**です。
-
-### 5-3. 貸し出し端末でアプリを確認する
-
-ビルドが完了（緑のチェックマーク ✅）したら、**運営から貸し出された Android 端末**を確認します。
-
-1. 端末で **Firebase App Tester** アプリを開く
-2. 最新のビルドが表示されている → **「ダウンロード」** をタップ
-3. ダウンロードが終わったら **「インストール」** をタップ
-4. アプリが起動できれば成功！🎉
-
-> 💡 リリースノートに **コミットメッセージ**（例：「自動ビルド - ビルドテスト」）が表示されるので、
-> どの push に対応するビルドかが分かります。
-
-**ここまでできたら、「push → 自動でスマホに届く」の一連の流れが確認できました！** 🏁
-以降は、main にマージするたびに同じ流れで最新版が届きます。
-
----
-
-## ステップ6：開発の流れ（当日はこうやって進める）
-
-全体の流れはこうです。
-
-```
-① ブランチを作る → ② Chrome で開発 → ③ push する → ④ main にマージ → ⑤ 自動でスマホに届く
-```
-
-> **大事なルール：`main` ブランチに直接コミットしない。**
-> 必ず自分のブランチを作って、そこで作業 → main にマージする流れで進めます。
-> main にマージされた瞬間に GitHub Actions が走り、APK が自動ビルドされてスマホに届きます。
-
-### ① ブランチを作る（最初に1回）
-
-作業を始めるとき、まず自分のブランチを作ります。
+### ② Chrome で開発する
 
 ```bash
-git checkout -b 自分の名前や機能名
+flutter run -d chrome
 ```
 
-例：
-
-```bash
-git checkout -b taro
-```
-
-> 💡 `git checkout -b` は「新しいブランチを作って、そこに移動する」コマンドです。
-> 一度作ったブランチに戻るときは `git checkout taro`（`-b` なし）でOKです。
-
-### ② Chrome で開発する（メインの作業場）
-
-```bash
-flutter run -d web-server --web-port 8080
-```
-
-起動したら普段使いの Chrome で `http://localhost:8080` を開きます。
-コードを変更すると、ターミナルで `r` キーを押すとブラウザが更新されます（hot reload）。
-**画面の見た目や操作のほとんどはこれで確認できます。**
+コードを変えるとブラウザが自動で更新されます（hot reload）。
 
 ### ③ 自分のブランチに push する
-
-ひと区切りついたら、自分のブランチを GitHub に push します。
 
 ```bash
 git add .
@@ -532,20 +329,9 @@ git commit -m "変更内容をここに書く"
 git push -u origin 自分のブランチ名
 ```
 
-例：
+> 2回目以降は `git push` だけでOK。この時点ではスマホには届きません。
 
-```bash
-git add .
-git commit -m "ログイン画面を修正"
-git push -u origin taro
-```
-
-> 💡 2回目以降の push は `git push` だけでOKです（`-u origin ...` は初回だけ）。
-> この時点ではまだスマホには届きません。**自分のブランチに push しただけ**です。
-
-### ④ main にマージする（ここで自動ビルドが走る！）
-
-自分のブランチの変更を main に合流させます。
+### ④ main にマージする（ここでスマホに届く！）
 
 ```bash
 git checkout main
@@ -554,21 +340,11 @@ git merge 自分のブランチ名
 git push
 ```
 
-例：
+> **`git push` した瞬間に自動ビルドが始まります。** 約5〜8分後にスマホに届きます。
+>
+> ⚠️ マージでエラー（コンフリクト）が出たら、無理に進めず運営に相談してください。
 
-```bash
-git checkout main
-git pull
-git merge taro
-git push
-```
-
-> **`git push` した瞬間に GitHub Actions が自動で動き出します。**
-> APK のビルドが始まり、約5〜8分後にスマホに届きます。
-
-> ⚠️ **マージでエラー（コンフリクト）が出たら**、無理に進めず運営に相談してください。
-
-マージしたら自分のブランチに戻って、続きの作業ができます。
+マージ後は自分のブランチに戻って作業を続けられます。
 
 ```bash
 git checkout 自分のブランチ名
@@ -576,31 +352,24 @@ git checkout 自分のブランチ名
 
 ### ⑤ スマホで確認する
 
-Firebase App Tester アプリを開いて、最新版をインストールします。
-**カメラ・動画まわりなど、Chrome では確認しづらい機能はここでチェック**してください。
+貸し出し端末の **Firebase App Tester** を開いて最新版をインストールします。
 
-> APK のリリースノートに **コミットメッセージ** が表示されるので、どの変更のビルドか分かります。
-
-### まとめ：よくある1サイクル
+### まとめ：1サイクル
 
 ```bash
-# 1. 自分のブランチで作業
-git checkout taro
-flutter run -d chrome        # Chrome で開発
+git checkout taro              # 自分のブランチで作業
+flutter run -d chrome          # Chrome で開発
 
-# 2. 変更を push
 git add .
 git commit -m "○○を修正"
-git push
+git push                       # 自分のブランチに push
 
-# 3. main にマージ → 自動でスマホに届く
 git checkout main
 git pull
 git merge taro
-git push                      # ← ここで Actions が走る！
+git push                       # ← ここで自動ビルドが走る！
 
-# 4. 自分のブランチに戻って続きの作業
-git checkout taro
+git checkout taro              # 戻って続きの作業
 ```
 
 > 💡 Chrome で確認できること・できないこと
@@ -614,27 +383,38 @@ git checkout taro
 
 ---
 
+## 📱 スマホ自動配布について
+
+`main` に push すると **GitHub Actions** が自動で APK をビルドし、貸し出し Android 端末に届きます。
+
+この仕組みを使うには、**グループごとに GitHub Actions の環境変数（Secrets）を設定**する必要があります。
+好きなタイミングで、以下の手順書を見ながら設定してください。
+
+👉 **[GitHub Actions 設定手順](docs/GitHub_Actions設定手順.md)**
+
+> 📱 **Android 端末は運営が貸し出します。**
+> Firebase App Tester のインストール・メールアドレスの登録は運営が済ませてあります。
+> 参加者側で端末の準備は不要です。
+
+---
+
 ## 困ったときは
 
 | こんな症状 | こうする |
-|------------|----------|
-| 起動したらエラー画面が出る | `.env` の URL・キーが間違っていないか確認（ステップ3） |
-| カメラが起動しない（Web） | `flutter run -d chrome` で起動していないか確認。`web-server` モードに切り替える（ステップ3-3） |
-| カメラ「許可されていません」と出る | Chrome のアドレスバー左 🔒 → カメラを「許可する」に変更 → リロード |
-| Chromeにカメラを許可しても動かない | Mac の「システム設定 → プライバシーとセキュリティ → カメラ」で Google Chrome をオンにする |
-| 新規登録したのにログインできない | 運営に連絡（Supabase側のメール確認設定の問題） |
-| 動画のアップロードに失敗する | 運営に連絡（Supabase側のテーブル設定の問題） |
-| `flutter` コマンドが見つからない | Flutterのインストール or PATH設定を見直す（ステップ1） |
-| `git clone` でアクセスできない | GitHubの招待を承認したか確認（ステップ2-2） |
-| `claude` コマンドが見つからない | Claude Code のインストールを見直す（ステップ4-1） |
-| Claude Code が認証エラーになる | `ANTHROPIC_API_KEY` を設定したか確認（ステップ4-2） |
-| push したのにスマホに届かない | 5〜8分待つ。それでも届かなければ運営に連絡 |
-| スマホにアプリをインストールできない | Firebase App Tester が入っているか・招待を承認したか確認（ステップ5） |
+|---|---|
+| `flutter` コマンドが見つからない | インストール or PATH 設定を見直す（ステップ1） |
+| `git clone` でアクセスできない | GitHub の招待を承認したか確認（ステップ2） |
+| 起動したらエラー画面が出る | `.env` の URL・Key が正しいか確認（ステップ3） |
+| ログインできない | 運営に連絡 |
+| `claude` コマンドが見つからない | Node.js と Claude Code のインストール確認（ステップ4） |
+| push したのにスマホに届かない | 5〜8分待つ / Actions の Secrets 設定を確認 |
+| ビルドが失敗する（赤いバツ） | Secret の Name の打ち間違いが多い。[手順書](docs/GitHub_Actions設定手順.md)を再確認 |
 
 ---
 
 ## もっと知りたい人へ
 
-- フォルダの構成や開発のルール → [docs/コーディング規約.md](docs/コーディング規約.md)
-- テスト用のダミーデータを入れたい → [supabase/seed.sql](supabase/seed.sql) を SQL Editor で実行
-- 運営向け：自動ビルド・配布の仕組みのセットアップ → [docs/運営セットアップ.md](docs/運営セットアップ.md)
+- フォルダ構成や開発ルール → [docs/コーディング規約.md](docs/コーディング規約.md)
+- テスト用ダミーデータ → [supabase/seed.sql](supabase/seed.sql) を SQL Editor で実行
+- スマホ自動配布の設定 → [docs/GitHub_Actions設定手順.md](docs/GitHub_Actions設定手順.md)
+- 運営向けセットアップ → [docs/運営セットアップ.md](docs/運営セットアップ.md)
