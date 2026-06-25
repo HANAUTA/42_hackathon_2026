@@ -9,6 +9,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../core/navigation.dart';
 import '../../models/group.dart';
+import '../../models/sticker_overlay.dart';
 import 'post_provider.dart';
 import 'recorded_video_view.dart';
 import 'video_preview_factory.dart';
@@ -26,6 +27,11 @@ class _SendScreenState extends ConsumerState<SendScreen> {
   // 自分のログへの投稿（時間制限なし）。初期状態でオン。
   bool _postToSelf = true;
   bool _sending = false;
+  final List<StickerOverlay> _stickers = [];
+
+  static const _availableStickers = [
+    '⭐', '❤️', '🔥', '😊', '🎉', '👍', '✨', '🌈', '🎵', '🌟', '💫', '🎯',
+  ];
 
   @override
   void initState() {
@@ -41,17 +47,21 @@ class _SendScreenState extends ConsumerState<SendScreen> {
   }
 
   Future<void> _initPreview(XFile video) async {
+    debugPrint('[send] プレビュー初期化: ${video.path}');
     final controller = createPreviewController(video.path);
     try {
       await controller.initialize();
       await controller.setLooping(true);
       await controller.play();
+      debugPrint('[send] ✅ プレビュー再生開始');
       if (!mounted) {
         await controller.dispose();
         return;
       }
       setState(() => _videoController = controller);
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[send] ❌ プレビュー初期化失敗: $e');
+      debugPrint('[send] $st');
       await controller.dispose();
     }
   }
@@ -64,6 +74,11 @@ class _SendScreenState extends ConsumerState<SendScreen> {
 
   Future<void> _send() async {
     final video = ref.read(recordedVideoProvider);
+    debugPrint('[send] _send() 呼び出し '
+        'video=${video?.file.path} '
+        'postToSelf=$_postToSelf '
+        'selectedGroups=${_selectedGroupIds.toList()} '
+        'stickers=${_stickers.length}件');
     if (video == null || _sending) return;
     if (!_postToSelf && _selectedGroupIds.isEmpty) return;
 
@@ -73,9 +88,13 @@ class _SendScreenState extends ConsumerState<SendScreen> {
             video: video.file,
             groupIds: _selectedGroupIds.toList(),
             needsFlip: video.needsFlip,
+            stickers: _stickers,
           );
+      debugPrint('[send] ✅ 送信完了 → /home へ遷移');
       if (mounted) context.go('/home');
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[send] ❌ 送信失敗: $e');
+      debugPrint('[send] $st');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('送信に失敗しました: $e')),
@@ -145,25 +164,100 @@ class _SendScreenState extends ConsumerState<SendScreen> {
   Widget _buildPreview() {
     final controller = _videoController;
     final needsFlip = ref.watch(recordedVideoProvider)?.needsFlip ?? false;
+    return Column(
+      children: [
+        Container(
+          color: Colors.black,
+          width: double.infinity,
+          child: controller != null && controller.value.isInitialized
+              // 撮影時(縦長フレーム)の見た目を90度回転した横長(16:9)で表示する。
+              ? AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: ClipRect(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        RecordedVideoView(
+                          controller: controller,
+                          needsFlip: needsFlip,
+                        ),
+                        _buildStickerLayer(),
+                      ],
+                    ),
+                  ),
+                )
+              : const SizedBox(
+                  height: 220,
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+        ),
+        _buildStickerPicker(),
+      ],
+    );
+  }
+
+  // ステッカー選択パレット。タップで動画中央に追加する。
+  Widget _buildStickerPicker() {
     return Container(
-      color: Colors.black,
-      width: double.infinity,
-      child: controller != null && controller.value.isInitialized
-          // 撮影時(縦長フレーム)の見た目を90度回転した横長(16:9)で表示する。
-          // 動画全体ではなく、撮影時と同じ枠に切り抜く（ホーム・グループ詳細と統一）。
-          ? AspectRatio(
-              aspectRatio: 16 / 9,
-              child: ClipRect(
-                child: RecordedVideoView(
-                  controller: controller,
-                  needsFlip: needsFlip,
+      color: Colors.black87,
+      height: 52,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        children: [
+          for (final emoji in _availableStickers)
+            GestureDetector(
+              onTap: _sending
+                  ? null
+                  : () => setState(() => _stickers.add(
+                        StickerOverlay(emoji: emoji, x: 0.5, y: 0.5),
+                      )),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                child: Text(emoji, style: const TextStyle(fontSize: 28)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ドラッグ移動・長押し削除ができるステッカー重ね表示。
+  Widget _buildStickerLayer() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          children: [
+            for (int i = 0; i < _stickers.length; i++)
+              Positioned(
+                left: _stickers[i].x * constraints.maxWidth - 16,
+                top: _stickers[i].y * constraints.maxHeight - 16,
+                child: GestureDetector(
+                  onPanUpdate: _sending
+                      ? null
+                      : (d) {
+                          setState(() {
+                            final s = _stickers[i];
+                            _stickers[i] = s.copyWith(
+                              x: (s.x + d.delta.dx / constraints.maxWidth)
+                                  .clamp(0.0, 1.0),
+                              y: (s.y + d.delta.dy / constraints.maxHeight)
+                                  .clamp(0.0, 1.0),
+                            );
+                          });
+                        },
+                  onLongPress: _sending
+                      ? null
+                      : () => setState(() => _stickers.removeAt(i)),
+                  child: Text(
+                    _stickers[i].emoji,
+                    style: const TextStyle(fontSize: 32),
+                  ),
                 ),
               ),
-            )
-          : const SizedBox(
-              height: 220,
-              child: Center(child: CircularProgressIndicator()),
-            ),
+          ],
+        );
+      },
     );
   }
 
