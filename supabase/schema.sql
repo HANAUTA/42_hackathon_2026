@@ -52,6 +52,7 @@ create table public.posts (
   user_id uuid not null references public.users (id) on delete cascade,
   video_url text not null,
   needs_flip boolean not null default false,
+  recorded_on_web boolean not null default false,
   created_at timestamptz not null default now()
 );
 
