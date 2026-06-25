@@ -409,6 +409,7 @@ class _MemberPostCardState extends State<_MemberPostCard> {
             RecordedVideoView(
               controller: controller,
               needsFlip: widget.post.needsFlip,
+              recordedOnWeb: widget.post.recordedOnWeb,
             )
           else
             const ColoredBox(

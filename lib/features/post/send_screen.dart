@@ -2,6 +2,7 @@
 // 1時間制限で送信済みのグループはグレーアウトして選択不可にする。
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -180,6 +181,7 @@ class _SendScreenState extends ConsumerState<SendScreen> {
                         RecordedVideoView(
                           controller: controller,
                           needsFlip: needsFlip,
+                          recordedOnWeb: kIsWeb,
                         ),
                         _buildStickerLayer(),
                       ],

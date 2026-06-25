@@ -148,6 +148,7 @@ class PostController {
           'user_id': userId,
           'video_url': videoUrl,
           'needs_flip': needsFlip,
+          'recorded_on_web': kIsWeb,
         })
         .select()
         .single();

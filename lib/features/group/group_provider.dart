@@ -21,6 +21,7 @@ class GroupPost {
     this.userIconUrl,
     required this.createdAt,
     this.needsFlip = false,
+    this.recordedOnWeb = false,
   });
 
   final String postId;
@@ -29,8 +30,8 @@ class GroupPost {
   final String userName;
   final String? userIconUrl;
   final DateTime createdAt;
-  // ファイル自体が上下逆に記録された動画(Android前面カメラ等)の補正フラグ。
   final bool needsFlip;
+  final bool recordedOnWeb;
 }
 
 // 投稿一覧取得の引数（グループ・日付・時間帯）。FutureProvider.family のキー。
@@ -176,7 +177,7 @@ class GroupService {
     final rows = await supabase
         .from('post_shares')
         .select(
-            'created_at, posts(id, user_id, video_url, needs_flip, created_at, users(name, icon_url))')
+            'created_at, posts(id, user_id, video_url, needs_flip, recorded_on_web, created_at, users(name, icon_url))')
         .eq('group_id', args.groupId)
         .eq('shared_date', args.sharedDate)
         .eq('shared_hour', args.hour)
@@ -193,6 +194,7 @@ class GroupService {
         userIconUrl: user?['icon_url'] as String?,
         createdAt: DateTime.parse(post['created_at'] as String),
         needsFlip: post['needs_flip'] as bool? ?? false,
+        recordedOnWeb: post['recorded_on_web'] as bool? ?? false,
       );
     }).toList();
   }

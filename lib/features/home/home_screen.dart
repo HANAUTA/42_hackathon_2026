@@ -372,6 +372,7 @@ class _VlogFeedState extends State<_VlogFeed> {
                   RecordedVideoView(
                     controller: controller,
                     needsFlip: widget.posts[_currentIndex].needsFlip,
+                    recordedOnWeb: widget.posts[_currentIndex].recordedOnWeb,
                   )
                 else
                   Container(
