@@ -18,13 +18,29 @@ drop table if exists public.users cascade;
 -- テーブル
 -- ============================================================
 
--- users: ユーザー情報（Supabase AuthのユーザーIDと対応）
+-- users: ユーザー情報（Supabase AuthのユーザーIDと対応）。プロフィール画面の表示・編集対象。
+-- bio: 自己紹介（任意）。updated_at: プロフィール更新日時（下のトリガで自動更新）。
 create table public.users (
   id uuid primary key references auth.users (id) on delete cascade,
   name text not null,
-  icon_url text,
-  created_at timestamptz not null default now()
+  bio text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+
+-- updated_at を更新時に自動で now() へ更新する共通トリガ関数（他テーブルでも流用可）。
+create or replace function public.set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists users_set_updated_at on public.users;
+create trigger users_set_updated_at
+  before update on public.users
+  for each row execute function public.set_updated_at();
 
 -- groups: グループ
 create table public.groups (
