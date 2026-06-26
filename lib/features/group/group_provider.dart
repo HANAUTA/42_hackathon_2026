@@ -6,6 +6,7 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/analytics.dart';
 import '../../core/supabase_client.dart';
 import '../../models/app_user.dart';
 import '../../models/group.dart';
@@ -107,6 +108,7 @@ class GroupService {
       'group_id': group.id,
       'user_id': userId,
     });
+    Analytics.log('group_created', {'group_id': group.id});
     return group;
   }
 
@@ -139,6 +141,7 @@ class GroupService {
       'group_id': group.id,
       'user_id': userId,
     });
+    Analytics.log('group_joined', {'group_id': group.id});
     return group;
   }
 

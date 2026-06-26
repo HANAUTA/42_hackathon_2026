@@ -275,6 +275,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
       debugPrint('[camera] ✅ 録画停止成功 path=${file.path} '
           'mimeType=${file.mimeType}');
       setState(() => _isRecording = false);
+      ref.read(retakeCountProvider.notifier).increment();
       ref
           .read(recordedVideoProvider.notifier)
           .set(RecordedVideo(file: file, needsFlip: _needsFlip));

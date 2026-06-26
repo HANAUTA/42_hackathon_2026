@@ -11,6 +11,7 @@ import '../features/home/home_screen.dart';
 import '../features/group/group_create_screen.dart';
 import '../features/group/group_join_screen.dart';
 import '../features/group/group_detail_screen.dart';
+import '../features/dashboard/dashboard_screen.dart';
 import '../features/post/camera_screen.dart';
 import '../features/post/send_screen.dart';
 
@@ -55,5 +56,9 @@ final router = GoRouter(
       ),
     ),
     GoRoute(path: '/send', builder: (context, state) => const SendScreen()),
+    GoRoute(
+      path: '/dashboard',
+      builder: (context, state) => const DashboardScreen(),
+    ),
   ],
 );

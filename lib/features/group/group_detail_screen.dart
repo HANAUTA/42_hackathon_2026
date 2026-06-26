@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/analytics.dart';
 import '../../core/cached_video.dart';
 import '../../core/jst.dart';
 import '../../models/app_user.dart';
@@ -329,6 +330,7 @@ class _MemberPostCardState extends State<_MemberPostCard> {
         return;
       }
       setState(() => _initialized = true);
+      Analytics.log('video_played', {'post_id': widget.post.postId});
       await controller.play();
     } catch (_) {
       if (mounted) setState(() => _failed = true);

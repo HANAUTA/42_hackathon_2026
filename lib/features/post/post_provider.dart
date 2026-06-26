@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/analytics.dart';
 import '../../core/app_platform.dart';
 import '../../core/jst.dart';
 import '../../core/supabase_client.dart';
@@ -36,6 +37,18 @@ class RecordedVideoNotifier extends Notifier<RecordedVideo?> {
 final recordedVideoProvider =
     NotifierProvider<RecordedVideoNotifier, RecordedVideo?>(
         RecordedVideoNotifier.new);
+
+class RetakeCountNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  int get count => state;
+  void increment() => state++;
+  void reset() => state = 0;
+}
+
+final retakeCountProvider =
+    NotifierProvider<RetakeCountNotifier, int>(RetakeCountNotifier.new);
 
 // 送信先選択に必要なデータ（参加中グループ + 今この時間帯に投稿済みのグループID）。
 class SendTargets {
@@ -171,6 +184,12 @@ class PostController {
       debugPrint('[post] ✅ post_shares insert 完了');
     }
 
+    Analytics.log('video_posted', {
+      'post_id': postId,
+      'group_count': groupIds.length,
+      'retake_count': _ref.read(retakeCountProvider.notifier).count,
+    });
+    _ref.read(retakeCountProvider.notifier).reset();
     _ref.read(recordedVideoProvider.notifier).clear();
     debugPrint('[post] send() 完了');
   }
