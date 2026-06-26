@@ -3,7 +3,6 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/app_platform.dart';
 import '../../core/supabase_client.dart';
 import '../../models/group.dart';
 import '../../models/post.dart';
@@ -12,7 +11,6 @@ import '../../models/post.dart';
 String? get _currentUserId => supabase.auth.currentUser?.id;
 
 // 自分が投稿したVlog一覧を created_at 降順で取得する。
-// Web/スマホで動画を棲み分けるため、現在のプラットフォームの投稿のみ取得する。
 final myPostsProvider = FutureProvider.autoDispose<List<Post>>((ref) async {
   final userId = _currentUserId;
   if (userId == null) return [];
@@ -21,7 +19,6 @@ final myPostsProvider = FutureProvider.autoDispose<List<Post>>((ref) async {
       .from('posts')
       .select()
       .eq('user_id', userId)
-      .eq('platform', currentPlatform)
       .order('created_at', ascending: false);
 
   return rows.map<Post>((row) => Post.fromJson(row)).toList();

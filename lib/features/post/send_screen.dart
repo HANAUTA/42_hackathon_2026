@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/app_platform.dart';
 import '../../core/navigation.dart';
 import '../../models/group.dart';
 import '../../models/sticker_overlay.dart';
@@ -180,6 +181,7 @@ class _SendScreenState extends ConsumerState<SendScreen> {
                         RecordedVideoView(
                           controller: controller,
                           needsFlip: needsFlip,
+                          recordedPlatform: currentPlatform,
                         ),
                         _buildStickerLayer(),
                       ],

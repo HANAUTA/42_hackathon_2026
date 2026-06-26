@@ -6,7 +6,6 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/app_platform.dart';
 import '../../core/supabase_client.dart';
 import '../../models/app_user.dart';
 import '../../models/group.dart';
@@ -21,6 +20,7 @@ class GroupPost {
     required this.userName,
     required this.createdAt,
     this.needsFlip = false,
+    this.platform = 'mobile',
   });
 
   final String postId;
@@ -30,6 +30,7 @@ class GroupPost {
   final DateTime createdAt;
   // ファイル自体が上下逆に記録された動画(Android前面カメラ等)の補正フラグ。
   final bool needsFlip;
+  final String platform;
 }
 
 // 投稿一覧取得の引数（グループ・日付・時間帯）。FutureProvider.family のキー。
@@ -162,16 +163,14 @@ class GroupService {
   }
 
   // 指定グループ・日付・時間帯の投稿一覧を取得する。
-  // Web/スマホで動画を棲み分けるため、現在のプラットフォームの投稿のみ取得する。
   Future<List<GroupPost>> fetchPosts(GroupPostsArgs args) async {
     final rows = await supabase
         .from('post_shares')
         .select(
-            'created_at, posts!inner(id, user_id, video_url, needs_flip, created_at, users(name))')
+            'created_at, posts!inner(id, user_id, video_url, needs_flip, platform, created_at, users(name))')
         .eq('group_id', args.groupId)
         .eq('shared_date', args.sharedDate)
         .eq('shared_hour', args.hour)
-        .eq('posts.platform', currentPlatform)
         .order('created_at');
 
     return rows.map((row) {
@@ -184,6 +183,7 @@ class GroupService {
         userName: (user?['name'] as String?) ?? '名無し',
         createdAt: DateTime.parse(post['created_at'] as String),
         needsFlip: post['needs_flip'] as bool? ?? false,
+        platform: post['platform'] as String? ?? 'mobile',
       );
     }).toList();
   }
