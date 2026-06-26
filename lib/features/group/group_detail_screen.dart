@@ -1,10 +1,9 @@
 // グループ詳細画面。指定した日付・時間帯のメンバー全員の投稿を一覧表示する。
 // 投稿済みは動画カード、未投稿は枠（プレースホルダー）で表示する。
-// 時間移動（左右タップ）／日付移動（左右スワイプ）／メンバー・招待・退出も担当。
+// 時間移動（左右タップ）／日付移動（左右スワイプ）／メンバー・招待も担当。
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/cached_video.dart';
@@ -249,18 +248,6 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                    icon: const Icon(Icons.logout),
-                    label: const Text('グループを退出'),
-                    onPressed: () => _confirmLeave(sheetContext),
-                  ),
-                ),
               ],
             ),
           ),
@@ -280,35 +267,6 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     );
   }
 
-  Future<void> _confirmLeave(BuildContext sheetContext) async {
-    final confirmed = await showDialog<bool>(
-      context: sheetContext,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('グループを退出しますか？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('キャンセル'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('退出する'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    try {
-      await ref.read(groupServiceProvider).leaveGroup(widget.groupId);
-      if (!mounted) return;
-      context.go('/home');
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('退出に失敗しました: $e')));
-    }
-  }
 }
 
 // メンバーの頭文字アバター。

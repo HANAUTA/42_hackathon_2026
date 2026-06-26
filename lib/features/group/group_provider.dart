@@ -141,15 +141,6 @@ class GroupService {
     return group;
   }
 
-  // グループから退出する（自分のメンバー行を削除）。
-  Future<void> leaveGroup(String groupId) async {
-    await supabase
-        .from('group_members')
-        .delete()
-        .eq('group_id', groupId)
-        .eq('user_id', _currentUserId);
-  }
-
   Future<Group> fetchGroup(String groupId) async {
     final json =
         await supabase.from('groups').select().eq('id', groupId).maybeSingle();
