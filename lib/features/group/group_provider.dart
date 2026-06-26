@@ -6,6 +6,7 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_platform.dart';
 import '../../core/supabase_client.dart';
 import '../../models/app_user.dart';
 import '../../models/group.dart';
@@ -18,7 +19,6 @@ class GroupPost {
     required this.userId,
     required this.videoUrl,
     required this.userName,
-    this.userIconUrl,
     required this.createdAt,
     this.needsFlip = false,
   });
@@ -27,7 +27,6 @@ class GroupPost {
   final String userId;
   final String videoUrl;
   final String userName;
-  final String? userIconUrl;
   final DateTime createdAt;
   // ファイル自体が上下逆に記録された動画(Android前面カメラ等)の補正フラグ。
   final bool needsFlip;
@@ -163,7 +162,7 @@ class GroupService {
   Future<List<AppUser>> fetchMembers(String groupId) async {
     final rows = await supabase
         .from('group_members')
-        .select('users(id, name, icon_url, created_at)')
+        .select('users(id, name, created_at)')
         .eq('group_id', groupId)
         .order('joined_at');
     return rows
@@ -172,14 +171,16 @@ class GroupService {
   }
 
   // 指定グループ・日付・時間帯の投稿一覧を取得する。
+  // Web/スマホで動画を棲み分けるため、現在のプラットフォームの投稿のみ取得する。
   Future<List<GroupPost>> fetchPosts(GroupPostsArgs args) async {
     final rows = await supabase
         .from('post_shares')
         .select(
-            'created_at, posts(id, user_id, video_url, needs_flip, created_at, users(name, icon_url))')
+            'created_at, posts!inner(id, user_id, video_url, needs_flip, created_at, users(name))')
         .eq('group_id', args.groupId)
         .eq('shared_date', args.sharedDate)
         .eq('shared_hour', args.hour)
+        .eq('posts.platform', currentPlatform)
         .order('created_at');
 
     return rows.map((row) {
@@ -190,7 +191,6 @@ class GroupService {
         userId: post['user_id'] as String,
         videoUrl: post['video_url'] as String,
         userName: (user?['name'] as String?) ?? '名無し',
-        userIconUrl: user?['icon_url'] as String?,
         createdAt: DateTime.parse(post['created_at'] as String),
         needsFlip: post['needs_flip'] as bool? ?? false,
       );

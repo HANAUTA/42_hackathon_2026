@@ -14,7 +14,7 @@ import '../../models/group.dart';
 import '../post/recorded_video_view.dart';
 import 'group_provider.dart';
 
-// メンバー頭文字アバターの色（icon_url が無いとき用）。
+// メンバー頭文字アバターの色。
 const _avatarColors = [
   Color(0xFF4FC3F7),
   Color(0xFF81C784),
@@ -274,7 +274,6 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
       contentPadding: EdgeInsets.zero,
       leading: _Avatar(
         name: member.name,
-        iconUrl: member.iconUrl,
         radius: 18,
       ),
       title: Text(member.name),
@@ -312,23 +311,18 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
   }
 }
 
-// メンバーの頭文字アバター（icon_url があれば画像）。
+// メンバーの頭文字アバター。
 class _Avatar extends StatelessWidget {
   const _Avatar({
     required this.name,
-    this.iconUrl,
     this.radius = 16,
   });
 
   final String name;
-  final String? iconUrl;
   final double radius;
 
   @override
   Widget build(BuildContext context) {
-    if (iconUrl != null) {
-      return CircleAvatar(radius: radius, backgroundImage: NetworkImage(iconUrl!));
-    }
     return CircleAvatar(
       radius: radius,
       backgroundColor: _colorFor(name),
@@ -419,7 +413,6 @@ class _MemberPostCardState extends State<_MemberPostCard> {
             ),
           _NameOverlay(
             name: widget.post.userName,
-            iconUrl: widget.post.userIconUrl,
           ),
           _TimeOverlay(label: widget.slotLabel),
         ],
@@ -458,7 +451,6 @@ class _EmptyMemberCard extends StatelessWidget {
           ),
           _NameOverlay(
             name: member.name,
-            iconUrl: member.iconUrl,
             dark: false,
           ),
           _TimeOverlay(label: slotLabel, dark: false),
@@ -501,10 +493,9 @@ class _CardFrame extends StatelessWidget {
 
 // カード左上の投稿者名＋アバター。
 class _NameOverlay extends StatelessWidget {
-  const _NameOverlay({required this.name, this.iconUrl, this.dark = true});
+  const _NameOverlay({required this.name, this.dark = true});
 
   final String name;
-  final String? iconUrl;
   final bool dark;
 
   @override
@@ -514,7 +505,7 @@ class _NameOverlay extends StatelessWidget {
       top: 12,
       child: Row(
         children: [
-          _Avatar(name: name, iconUrl: iconUrl, radius: 14),
+          _Avatar(name: name, radius: 14),
           const SizedBox(width: 8),
           Text(
             name,

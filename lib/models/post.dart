@@ -8,6 +8,7 @@ class Post {
     required this.videoUrl,
     required this.createdAt,
     this.needsFlip = false,
+    this.platform = 'mobile',
   });
 
   final String id;
@@ -16,6 +17,8 @@ class Post {
   final DateTime createdAt;
   // ファイル自体が上下逆に記録された動画(Android前面カメラ等)の補正フラグ。
   final bool needsFlip;
+  // 投稿元プラットフォーム('web' / 'mobile')。同じプラットフォームでのみ取得できる。
+  final String platform;
 
   factory Post.fromJson(Map<String, dynamic> json) {
     return Post(
@@ -24,6 +27,7 @@ class Post {
       videoUrl: json['video_url'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       needsFlip: json['needs_flip'] as bool? ?? false,
+      platform: json['platform'] as String? ?? 'mobile',
     );
   }
 
@@ -34,6 +38,7 @@ class Post {
       'video_url': videoUrl,
       'created_at': createdAt.toIso8601String(),
       'needs_flip': needsFlip,
+      'platform': platform,
     };
   }
 }
