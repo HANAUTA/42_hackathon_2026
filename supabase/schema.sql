@@ -63,8 +63,7 @@ create table public.group_members (
 -- posts: 投稿（動画本体）。共有先は post_shares で管理する。
 -- needs_flip: 撮影時にファイル自体が上下逆で記録された動画(Android前面カメラ等)に立てる。
 -- 再生時にこのフラグを見て180度回転して向きを補正する。
--- platform: 投稿元プラットフォーム('web' / 'mobile')。動画の性質上、Web動画はWebのみ・
--- スマホ動画はスマホのみで取得できるよう、取得時に同じ値で絞り込んで棲み分ける。
+-- platform: 投稿元プラットフォーム('web' / 'mobile')。再生時の回転補正に使う。
 create table public.posts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users (id) on delete cascade,
@@ -152,6 +151,27 @@ create policy "post_shares_insert_owner" on public.post_shares
       where p.id = post_id and p.user_id = auth.uid()
     )
   );
+
+-- ============================================================
+-- アナリティクス
+-- ============================================================
+
+drop table if exists public.analytics_events cascade;
+
+create table public.analytics_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users (id),
+  event_name text not null,
+  properties jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.analytics_events enable row level security;
+
+create policy "analytics_insert_all" on public.analytics_events
+  for insert with check (true);
+create policy "analytics_select_all" on public.analytics_events
+  for select using (true);
 
 -- ============================================================
 -- Storage バケット

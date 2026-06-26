@@ -8,295 +8,37 @@
 ## 全体の流れ
 
 ```
-【事前に自分で準備】 VS Code・Chrome・GitHub アカウント
+【事前に自分で準備】 VS Code・Chrome・Git・GitHub アカウント
         ↓
 【当日みんなで】    Flutter → clone → .env → 起動！
+        ↓
+【動いたら】        必須課題 → 自由課題に挑戦
         ↓
 【好きなタイミングで】Claude Code 設定 ／ スマホ配布設定
 ```
 
-### 🎯 最初のゴール：全員がアプリを起動できること
-
-1. **Flutter を入れる**（当日みんなで）
-2. **チームのリポジトリを作ってクローンする**（当日みんなで）
-3. **アプリを起動する**（配られた値をコピペするだけ） ← ✅ ここまで来たらゴール！
-
-### 🛠 そのあと（グループごとに好きなタイミングで）
-
-4. **Claude Code を設定する**（配られた API キーを使う）
-5. **開発の流れを知る**（ブランチ → 開発 → マージ → スマホに届く）
-
 > 💡 開発は **Chrome（ブラウザ）** で行います。Windows でも Mac でも同じです。
-> スマホでの確認は `main` に push すると**自動で Android 端末に届く**仕組みです（設定方法は後述）。
+> スマホでの確認は `main` に push すると**自動で Android 端末に届く**仕組みです（後述）。
 
 ---
 
-## 事前に準備しておくもの
+## 📚 まずはこれを読む
 
-当日スムーズに始めるために、**以下を事前に用意**しておいてください。
-詳しいインストール手順は 👉 **[事前準備ガイド](docs/事前準備ガイド.md)** を参照。
-
-### ✅ VS Code（エディタ）
-
-1. [VS Code 公式ダウンロードページ](https://code.visualstudio.com/) を開く
-2. 自分のパソコン（Windows / Mac）に合わせてダウンロード → インストール
-
-> 💡 VS Code を開いて左の四角いアイコン（拡張機能）から **「Flutter」** を検索してインストールしておくと開発が楽になります。
-
-### ✅ Chrome（ブラウザ）
-
-開発中のアプリを Chrome で表示して確認します。
-入っていない人は [google.com/chrome](https://www.google.com/chrome/) からインストール。
-
-### ✅ Git（バージョン管理ツール）
-
-コードのダウンロードや共有に必要です。ターミナルで `git --version` を打ってバージョンが出ればOK。
-
-- 🪟 Windows：[git-scm.com](https://git-scm.com/download/win) からインストール
-- 🍎 Mac：ターミナルで `git --version` を打つと自動でインストールを案内されます
-
-### ✅ GitHub アカウント
-
-コードの保存・共有に使います。
-アカウントが無い人は [github.com](https://github.com) で作っておいてください。
-
----
-
-## ステップ1：Flutter を入れる
-
-> すでに入っている人は飛ばしてOK。確認方法 ↓
->
-> ```bash
-> flutter --version
-> ```
->
-> バージョンが出れば入っています。
-
-### 🪟 Windows の人
-
-PowerShell を開いて、**1行ずつコピペして実行**してください。
-
-```powershell
-# 1. Flutter SDK をダウンロード・展開する（C:\src に配置）
-mkdir C:\src -ErrorAction SilentlyContinue
-cd C:\src
-Invoke-WebRequest -Uri "https://storage.googleapis.com/flutter_infra_release/releases/stable/windows/flutter_windows_3.32.4-stable.zip" -OutFile flutter.zip
-Expand-Archive -Path flutter.zip -DestinationPath . -Force
-Remove-Item flutter.zip
-```
-
-```powershell
-# 2. PATH に永続的に追加する（今のターミナルにも即反映）
-$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if ($currentPath -notlike "*C:\src\flutter\bin*") {
-  [Environment]::SetEnvironmentVariable("Path", "$currentPath;C:\src\flutter\bin", "User")
-}
-$env:Path += ";C:\src\flutter\bin"
-```
-
-```powershell
-# 3. 確認
-flutter doctor
-```
-
-> ✅ PATH は永続化済みです。ターミナルを閉じて開き直しても `flutter` が使えます。
-
-### 🍎 Mac の人
-
-ターミナルを開いて、**1行ずつコピペして実行**してください。
-
-```bash
-# 1. Homebrew で Flutter をインストール
-brew install --cask flutter
-```
-
-```bash
-# 2. 確認
-flutter doctor
-```
-
-> Homebrew が無い人は、先にこれを実行：
->
-> ```bash
-> /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-> ```
-
-### 入れ終わったら
-
-```bash
-flutter doctor
-```
-
-✅ いくつか緑のチェックが出ればOK。
-`[!]` マークが出ても、Chrome が使えていれば問題ありません。
-
----
-
-## ステップ2：チームのリポジトリを作ってクローンする
-
-テンプレートのコードをコピーして、**チーム専用のリポジトリ**を作ります。
-
-### 2-1. git が入っているか確認する
-
-```bash
-git --version
-```
-
-バージョンが出ればOK。出ない人は入れます。
-
-- 🍎 Mac：`brew install git`
-- 🪟 Windows：[git公式ページ](https://git-scm.com/download/win) からインストール
-
-### 2-2. 代表者がリポジトリを作る（チームで1人だけ）
-
-> **この作業は代表者1人だけ**です。他のメンバーは 2-3 まで待ってください。
-
-#### ① GitHub に空のリポジトリを作る
-
-1. [github.com](https://github.com) にログイン
-2. 右上の **「+」** → **「New repository」** をクリック
-3. 以下を入力する
-
-| 項目 | 入れる値 |
+| やること | ドキュメント |
 |---|---|
-| Repository name | チーム名など（例：`team-alpha-setlog`） |
-| Public / Private | **Public** |
-| Initialize this repository | **チェックしない**（空のまま） |
+| ① 当日までに用意するもの | [事前準備ガイド](docs/事前準備ガイド.md) |
+| ② アプリを起動するまで | [環境構築（当日手順）](docs/環境構築.md) |
+| ③ 全員でやる課題 | [必須課題](docs/必須課題.md) |
+| ④ 慣れてきたら挑戦 | [自由課題](docs/自由課題.md) |
 
-4. **「Create repository」** をクリック
-5. 表示されるリポジトリの URL をメモしておく
-
-#### ② テンプレートをコピーして push する
-
-ターミナルで **1行ずつ順番に** コピペして実行します。
-**最後の行の URL だけ**、①で作った自分のリポジトリの URL に置きかえてください。
-
-```bash
-git clone -b yunchol https://github.com/HANAUTA/42_hackathon_2026.git
-```
-
-```bash
-cd 42_hackathon_2026
-```
-
-```bash
-rm -rf .git
-```
-
-```bash
-git init
-```
-
-```bash
-git add .
-```
-
-```bash
-git commit -m "Initial commit"
-```
-
-```bash
-git branch -M main
-```
-
-```bash
-git remote add origin https://github.com/あなたのユーザー名/リポジトリ名.git
-```
-
-```bash
-git push -u origin main
-```
-
-```bash
-cd リポジトリ名
-```
-
-```bash
-flutter pub get
-```
-
-
-> 🔑 push 時にログインを求められたら、GitHub のユーザー名と
-> **パスワードの代わりにアクセストークン（PAT）** を入力します。
-
+> 🎯 **最初のゴールは「全員がアプリを起動できること」**。
+> [環境構築](docs/環境構築.md) の手順どおりに進めれば Chrome でアプリが立ち上がります。
 
 ---
 
-## ステップ3：アプリを起動する
+## 開発の流れ
 
-### 3-1. 設定ファイルを作る
-
-```bash
-cp .env.example .env
-```
-
-### 3-2. 配られた接続情報を貼る
-
-運営から **Supabase の URL と Key** が配られます。
-`.env` ファイルを VS Code で開いて、配られた値を貼り付けてください。
-
-```
-SUPABASE_URL=https://xxxxxxxx.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOi...（長い文字列）
-```
-
-> ⚠️ **ブラウザのアドレスバーの URL ではありません！** 配られたものをそのまま貼ってください。
->
-> 🔑 `.env` には大事な情報が入るので、GitHub には上がりません（設定済み）。
-
-### 3-3. 起動！
-
-```bash
-flutter run -d chrome
-```
-
-Chrome が立ち上がってアプリが表示されたら成功です🎉
-
-**ここまでで「全員がアプリを起動できる」ゴール達成です！** 🏁
-
----
-
-## ステップ4：Claude Code を設定する（任意）
-
-> グループごとに好きなタイミングで進めてください。
-
-
-### 4-1. Claude Code を入れる
-
-```bash
-npm install -g @anthropic-ai/claude-code
-```
-
-> Node.js が入っていない人は [nodejs.org](https://nodejs.org) からインストール
-> （🍎 Mac は `brew install node` でもOK）。
-
-### 4-2. API キーを設定する
-
-🍎 **Mac**
-
-```bash
-export ANTHROPIC_API_KEY=（配られたキーを貼る）
-```
-
-🪟 **Windows**（PowerShell）
-
-```powershell
-$env:ANTHROPIC_API_KEY="（配られたキーを貼る）"
-```
-
-> 💡 ターミナルを閉じると消えます。永続化したい人は Mac なら `~/.zshrc` に `export ...` を追加。
-
-### 4-3. 確認
-
-```bash
-claude
-```
-
-会話できれば成功です🎉
-
----
-
-## ステップ5：開発の流れ
+起動できたら、いよいよ開発です。
 
 ```
 ① ブランチを作る → ② Chrome で開発 → ③ push → ④ main にマージ → ⑤ スマホに届く
@@ -402,11 +144,11 @@ git checkout taro              # 戻って続きの作業
 
 | こんな症状 | こうする |
 |---|---|
-| `flutter` コマンドが見つからない | インストール or PATH 設定を見直す（ステップ1） |
-| `git clone` でアクセスできない | GitHub の招待を承認したか確認（ステップ2） |
-| 起動したらエラー画面が出る | `.env` の URL・Key が正しいか確認（ステップ3） |
+| `flutter` コマンドが見つからない | インストール or PATH 設定を見直す（[環境構築](docs/環境構築.md) ステップ1） |
+| `git clone` でアクセスできない | GitHub の招待を承認したか確認（[環境構築](docs/環境構築.md) ステップ2） |
+| 起動したらエラー画面が出る | `.env` の URL・Key が正しいか確認（[環境構築](docs/環境構築.md) ステップ3） |
 | ログインできない | 運営に連絡 |
-| `claude` コマンドが見つからない | Node.js と Claude Code のインストール確認（ステップ4） |
+| `claude` コマンドが見つからない | Node.js と Claude Code のインストール確認（[環境構築](docs/環境構築.md) ステップ4） |
 | push したのにスマホに届かない | 5〜8分待つ / Actions の Secrets 設定を確認 |
 | ビルドが失敗する（赤いバツ） | Secret の Name の打ち間違いが多い。[手順書](docs/GitHub_Actions設定手順.md)を再確認 |
 
@@ -414,7 +156,7 @@ git checkout taro              # 戻って続きの作業
 
 ## もっと知りたい人へ
 
-- フォルダ構成や開発ルール → [docs/コーディング規約.md](docs/コーディング規約.md)
+- フォルダ構成や開発ルール → [コーディング規約](docs/コーディング規約.md)
+- データベースの構造 → [データベース設計](docs/データベース設計.md)
 - テスト用ダミーデータ → [supabase/seed.sql](supabase/seed.sql) を SQL Editor で実行
-- スマホ自動配布の設定 → [docs/GitHub_Actions設定手順.md](docs/GitHub_Actions設定手順.md)
-- 運営向けセットアップ → [docs/運営セットアップ.md](docs/運営セットアップ.md)
+- スマホ自動配布の設定 → [GitHub Actions 設定手順](docs/GitHub_Actions設定手順.md)
